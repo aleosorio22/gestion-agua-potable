@@ -10,13 +10,15 @@ return new class extends Migration
     {
         Schema::create('documentos_cliente', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('cliente_id')->constrained('clientes');
+            $table->foreignId('cliente_id')->constrained('clientes')->cascadeOnDelete();
             $table->enum('tipo', ['confirmacion', 'contrato']);
             $table->string('archivo_url', 500);
             $table->boolean('firmado')->default(false);
             $table->date('fecha_firma')->nullable();
-            $table->foreignId('subido_por')->constrained('users');
+            $table->foreignId('subido_por')->constrained('users')->restrictOnDelete();
             $table->timestamps();
+
+            $table->index(['cliente_id', 'tipo']);
         });
     }
 
