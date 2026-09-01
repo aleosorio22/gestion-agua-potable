@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('lecturas', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('contador_id')->constrained('contadores');
-            $table->foreignId('usuario_id')->constrained('users'); // Operario que tomó la lectura
+            $table->foreignId('contador_id')->constrained('contadores')->restrictOnDelete();
+            $table->foreignId('usuario_id')->constrained('users')->restrictOnDelete(); // Operario que tomó la lectura
             $table->string('periodo', 7); // ej: '2026-08'
             $table->decimal('lectura_anterior', 10, 2);
             $table->decimal('lectura_actual', 10, 2);
@@ -23,6 +23,9 @@ return new class extends Migration
             // Idempotencia a nivel de BD: un contador no se lee dos veces en el
             // mismo período, aunque haya doble clic o reintento de red.
             $table->unique(['contador_id', 'periodo']);
+
+            // Listados de "lecturas del período" en la pantalla de facturación.
+            $table->index('periodo');
         });
     }
 

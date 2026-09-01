@@ -10,12 +10,15 @@ return new class extends Migration
     {
         Schema::create('pagos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('factura_id')->constrained('facturas');
-            $table->foreignId('usuario_id')->constrained('users'); // Secretaria que registró el pago
+            $table->foreignId('factura_id')->constrained('facturas')->restrictOnDelete();
+            $table->foreignId('usuario_id')->constrained('users')->restrictOnDelete(); // Secretaria que registró el pago
             $table->decimal('monto', 10, 2);
             $table->date('fecha_pago');
             $table->enum('metodo_pago', ['efectivo', 'tarjeta', 'transferencia']);
             $table->timestamps();
+
+            // Cortes de caja por día.
+            $table->index('fecha_pago');
             // Nota: no se editan ni se borran (regla de negocio) — se refuerza
             // en el Model Policy de Filament, no a nivel de esquema.
         });

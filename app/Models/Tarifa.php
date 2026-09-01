@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Tarifa extends Model implements Auditable
 {
+    use HasFactory;
     use \OwenIt\Auditing\Auditable;
 
     protected $table = 'tarifas';
@@ -47,7 +49,7 @@ class Tarifa extends Model implements Auditable
             ->where('vigente_desde', '<=', $fecha)
             ->where(function ($q) use ($fecha) {
                 $q->whereNull('vigente_hasta')
-                  ->orWhere('vigente_hasta', '>', $fecha);
+                    ->orWhere('vigente_hasta', '>', $fecha);
             });
     }
 }

@@ -11,8 +11,10 @@ return new class extends Migration
         Schema::create('clientes', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 150);
-            $table->string('nit', 20)->nullable();
-            $table->string('dpi', 20)->nullable();
+            // NIT y DPI identifican a la persona: únicos para no duplicar clientes.
+            // MySQL permite varios NULL en un índice único, así que siguen siendo opcionales.
+            $table->string('nit', 20)->nullable()->unique();
+            $table->string('dpi', 20)->nullable()->unique();
             $table->string('direccion', 255);
             $table->string('telefono', 20)->nullable();
             $table->string('email', 150)->nullable();
@@ -20,6 +22,8 @@ return new class extends Migration
             // Catálogo -> baja lógica, nunca borrado físico (buena práctica del README)
             $table->softDeletes();
             $table->timestamps();
+
+            $table->index(['estado', 'nombre']);
         });
     }
 
