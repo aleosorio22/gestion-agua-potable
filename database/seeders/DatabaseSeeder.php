@@ -11,8 +11,7 @@ class DatabaseSeeder extends Seeder
 
     /**
      * El orden importa: los permisos y el rol super_admin deben existir antes
-     * de sembrar el administrador, porque el seeder del admin le asigna ese
-     * rol. Antes AdminUserSeeder corría primero y el usuario quedaba sin rol.
+     * de sembrar el administrador, porque el seeder del admin le asigna ese rol.
      */
     public function run(): void
     {
@@ -20,7 +19,10 @@ class DatabaseSeeder extends Seeder
             ShieldSeeder::class,
             RoleSeeder::class,
             AdminUserSeeder::class,
-            PajaSeeder::class,
+            ConfiguracionSeeder::class,
+            CatalogosSeeder::class,
+            SerieDocumentoSeeder::class,
+            PeriodoSeeder::class,
         ]);
     }
 }
