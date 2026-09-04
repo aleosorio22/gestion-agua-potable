@@ -15,11 +15,12 @@ class Lectura extends Model implements Auditable
 
     protected $fillable = [
         'contador_id',
+        'periodo_id',
         'usuario_id',
-        'periodo',
         'lectura_anterior',
         'lectura_actual',
         'fecha_lectura',
+        'observaciones',
     ];
 
     // consumo_m3 es columna generada (STORED) en la BD — no va en $fillable,
@@ -40,7 +41,12 @@ class Lectura extends Model implements Auditable
         return $this->belongsTo(Contador::class);
     }
 
-    // Operario que tomó la lectura
+    public function periodo()
+    {
+        return $this->belongsTo(Periodo::class);
+    }
+
+    // Lector que tomó la lectura
     public function usuario()
     {
         return $this->belongsTo(User::class, 'usuario_id');
@@ -51,8 +57,13 @@ class Lectura extends Model implements Auditable
         return $this->hasMany(EvidenciaLectura::class);
     }
 
-    public function factura()
+    public function boleta()
     {
-        return $this->hasOne(Factura::class);
+        return $this->hasOne(Boleta::class);
+    }
+
+    public function getEstaFacturadaAttribute(): bool
+    {
+        return $this->boleta()->exists();
     }
 }
