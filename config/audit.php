@@ -201,5 +201,7 @@ return [
     |
     */
 
-    'console' => false,
+    // true: lo que se hace desde comandos y seeders también deja rastro.
+    // En una entidad pública, un cambio por consola no puede ser invisible.
+    'console' => true,
 ];

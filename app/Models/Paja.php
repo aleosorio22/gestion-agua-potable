@@ -16,12 +16,14 @@ class Paja extends Model implements Auditable
     protected $fillable = [
         'nombre',
         'equivalencia_m3',
+        'activo',
     ];
 
     protected function casts(): array
     {
         return [
             'equivalencia_m3' => 'decimal:2',
+            'activo' => 'boolean',
         ];
     }
 
@@ -33,5 +35,13 @@ class Paja extends Model implements Auditable
     public function tarifas()
     {
         return $this->hasMany(Tarifa::class);
+    }
+
+    /**
+     * La tarifa que rige en una fecha dada para esta paja.
+     */
+    public function tarifaVigenteEn($fecha = null): ?Tarifa
+    {
+        return Tarifa::vigenteEn($this->id, $fecha ?? now());
     }
 }

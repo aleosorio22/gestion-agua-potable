@@ -25,11 +25,11 @@ function usuarioConRol(string $rol): User
 
 it('deja entrar al panel a los roles internos', function (string $rol) {
     expect(usuarioConRol($rol)->canAccessPanel(panelAdmin()))->toBeTrue();
-})->with(['Administrador', 'Secretario', 'Operario']);
+})->with(['Administrador', 'Secretaria', 'Lector']);
 
 it('mantiene la lista de roles del panel alineada con la configuracion', function () {
     expect(config('admin.panel_roles'))
-        ->toEqualCanonicalizing(['Administrador', 'Secretario', 'Operario'])
+        ->toEqualCanonicalizing(['Administrador', 'Secretaria', 'Lector'])
         ->and(config('admin.roles'))->toContain('Cliente');
 });
 

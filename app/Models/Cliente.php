@@ -16,12 +16,13 @@ class Cliente extends Model implements Auditable
     protected $table = 'clientes';
 
     protected $fillable = [
+        'codigo',
         'nombre',
         'nit',
         'dpi',
-        'direccion',
         'telefono',
         'email',
+        'direccion_notificacion',
         'estado',
     ];
 
@@ -30,19 +31,33 @@ class Cliente extends Model implements Auditable
         return $this->hasMany(Contador::class);
     }
 
-    public function facturas()
+    public function boletas()
     {
-        return $this->hasMany(Factura::class);
+        return $this->hasMany(Boleta::class);
     }
 
     public function documentos()
     {
-        return $this->hasMany(DocumentoCliente::class);
+        return $this->hasMany(Documento::class);
     }
 
-    // El login del portal de autoservicio (0 o 1 usuario por cliente)
-    public function usuario()
+    /**
+     * Los predios donde este cliente tiene servicio, vía sus contadores.
+     */
+    public function predios()
     {
-        return $this->hasOne(User::class);
+        return $this->hasManyThrough(
+            Predio::class,
+            Contador::class,
+            'cliente_id',
+            'id',
+            'id',
+            'predio_id'
+        );
+    }
+
+    public function scopeActivos($query)
+    {
+        return $query->where('estado', 'activo');
     }
 }
