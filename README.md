@@ -122,6 +122,23 @@ Decisiones que conviene conocer antes de tocar el esquema:
 - **Un período cerrado no admite lecturas nuevas ni cambios.**
 - **Auditoría**: todos los modelos del dominio, más `User`, roles y permisos, escriben en `audits`. `audit.console` está activo, así que los cambios por consola también quedan.
 
+## Catálogos
+
+Las pantallas del grupo **Catálogos** del panel (`app/Filament/Admin/Resources`) administran los datos maestros: sectores, pajas, tarifas, métodos de pago, tipos de documento y series de documento.
+
+Todas siguen la misma regla: **una fila de catálogo que ya respalda documentos no se borra, se desactiva.** Las claves foráneas ya son `restrictOnDelete`, así que el motor lo impide de todas formas; el trait `EsCatalogo` traduce ese candado a un mensaje entendible (`motivoDeUso()` devuelve «1 contador, 2 tarifas») y `AccionesCatalogo::eliminar()` deshabilita el botón antes de que alguien lo descubra chocando.
+
+Dos catálogos llevan candados propios, en observers, porque el esquema no puede expresarlos:
+
+| Regla | Dónde | Por qué |
+|---|---|---|
+| Una tarifa que ya emitió boletas no se edita ni se borra | `TarifaObserver` | El precio con el que se cobró es parte del expediente. Para subir el precio se registra otra tarifa con nueva fecha de vigencia. Mientras no haya cobrado nada sí se corrige. |
+| El formato del folio se congela al emitir el primer documento | `SerieDocumentoObserver` | Cambiarlo produciría dos folios distintos con el mismo número. Lo que sí se puede es desactivar la serie y abrir otra. |
+| El correlativo solo lo mueve `reservarNumero()` | `SerieDocumentoObserver` | Fijarlo a mano repite números o deja huecos que nadie puede explicar en una auditoría. Al **crear** la serie sí se elige el número inicial, para arrancar donde quedó el talonario de papel. |
+| Solo una serie activa por tipo de documento | `SerieDocumentoObserver` | `SerieDocumento::activaPara()` resuelve con `->first()`: con dos activas el documento saldría con una u otra según el orden del motor. |
+
+Los códigos de `metodos_pago` y `tipos_documento` se fijan al crearlos y ya no cambian: son el identificador estable que referencian cortes de caja y expedientes. El nombre visible sí se corrige libremente.
+
 ## Servicios
 
 La lógica que el esquema no puede imponer vive en `app/Services`:
@@ -137,6 +154,8 @@ php artisan test --compact
 
 Las pruebas corren sobre SQLite en memoria (ver `phpunit.xml`), no sobre MySQL. El esquema está verificado en ambos motores, pero al agregar migraciones conviene comprobar que sigan corriendo en los dos.
 
+`CatalogosTest` cubre las reglas de negocio de los catálogos y `CatalogosPanelTest` renderiza cada pantalla del panel: listado, alta y edición. Lo segundo es lo que atrapa una columna mal escrita o una relación que no existe, cosas que las pruebas de reglas no ven porque nunca renderizan.
+
 ## Antes de desplegar a producción
 
 - [ ] `ADMIN_PASSWORD` cambiado por uno real
@@ -149,6 +168,8 @@ Las pruebas corren sobre SQLite en memoria (ver `phpunit.xml`), no sobre MySQL. 
 
 El modelado de datos, los roles, el acceso al panel y los servicios de emisión y cobro están terminados y cubiertos por pruebas.
 
-**Todavía no existen Resources de Filament** (`app/Filament/`), así que el panel arranca vacío. Ese es el siguiente paso: las pantallas de Cliente, Predio, Contador, Tarifa, Lectura, Boleta y Pago, más el recibo imprimible.
+Del panel están hechos los **catálogos** (sectores, pajas, tarifas, métodos de pago, tipos de documento y series) y la pantalla de **Clientes**.
+
+Faltan las pantallas de Predio, Contador, Lectura, Boleta y Pago, más el recibo imprimible.
 
 Pendiente también: la factura electrónica (FEL) como función premium, en la tabla `documentos_fiscales` que aún no se creó — está pensada como tabla aparte con relación 1:1 opcional contra `boletas`, así que agregarla no requerirá tocar el esquema existente.

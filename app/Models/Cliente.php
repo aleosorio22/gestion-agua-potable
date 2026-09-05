@@ -56,6 +56,9 @@ class Cliente extends Model implements Auditable
         );
     }
 
+    /**
+     * Scope a query to only include active clients.
+     */
     public function scopeActivos($query)
     {
         return $query->where('estado', 'activo');

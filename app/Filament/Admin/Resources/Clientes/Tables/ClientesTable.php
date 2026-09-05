@@ -1,0 +1,65 @@
+<?php
+
+namespace App\Filament\Admin\Resources\Clientes\Tables;
+
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Table;
+
+class ClientesTable
+{
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('codigo')
+                    ->label('Código Cliente')
+                    ->searchable(),
+                TextColumn::make('nombre')
+                    ->searchable(),
+                TextColumn::make('nit')
+                    ->searchable(),
+                TextColumn::make('dpi')
+                    ->searchable(),
+                TextColumn::make('telefono')
+                    ->searchable(),
+                TextColumn::make('email')
+                    ->label('Correo Electrónico')
+                    ->searchable(),
+                TextColumn::make('direccion_notificacion')
+                    ->searchable(),
+                TextColumn::make('estado')
+                    ->badge(),
+                TextColumn::make('deleted_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                TrashedFilter::make(),
+            ])
+            ->recordActions([
+                EditAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
+                ]),
+            ]);
+    }
+}

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EsCatalogo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -16,6 +17,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  */
 class Tarifa extends Model implements Auditable
 {
+    use EsCatalogo;
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
 
@@ -105,6 +107,16 @@ class Tarifa extends Model implements Auditable
             'monto_base' => $montoBase,
             'monto_excedente' => $montoExcedente,
             'monto' => round($montoBase + $montoExcedente, 2),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function relacionesQueImpidenBorrado(): array
+    {
+        return [
+            'boletas' => 'boleta emitida|boletas emitidas',
         ];
     }
 }
