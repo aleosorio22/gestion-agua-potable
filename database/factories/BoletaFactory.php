@@ -22,7 +22,10 @@ class BoletaFactory extends Factory
         $ejercicio = (int) now()->year;
 
         return [
-            'serie_id' => SerieDocumento::factory(),
+            // Una sola serie activa por tipo, como en producción: abrir una
+            // por boleta chocaría con SerieDocumentoObserver.
+            'serie_id' => fn (): int => SerieDocumento::activaPara('boleta')?->id
+                ?? SerieDocumento::factory()->create()->id,
             'ejercicio' => $ejercicio,
             'numero' => $numero,
             'folio' => 'BOL-'.$ejercicio.str_pad((string) $numero, 6, '0', STR_PAD_LEFT),

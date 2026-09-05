@@ -18,6 +18,7 @@ class ClientesTable
         return $table
             ->columns([
                 TextColumn::make('codigo')
+                    ->label('Código Cliente')
                     ->searchable(),
                 TextColumn::make('nombre')
                     ->searchable(),
@@ -28,7 +29,7 @@ class ClientesTable
                 TextColumn::make('telefono')
                     ->searchable(),
                 TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('Correo Electrónico')
                     ->searchable(),
                 TextColumn::make('direccion_notificacion')
                     ->searchable(),
