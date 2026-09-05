@@ -1,5 +1,6 @@
 <?php
 
+use Database\Factories\PeriodoFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,6 +17,9 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    // (anio, mes) es único en periodos, así que la secuencia del factory debe
+    // arrancar de cero en cada prueba.
+    ->beforeEach(fn () => PeriodoFactory::reiniciarSecuencia())
     ->in('Feature');
 
 /*

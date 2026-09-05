@@ -35,8 +35,8 @@ return [
 
     'roles' => [
         'Administrador',
-        'Secretario',
-        'Operario',
+        'Secretaria',
+        'Lector',
         'Cliente',
     ],
 
@@ -52,8 +52,8 @@ return [
 
     'panel_roles' => [
         'Administrador',
-        'Secretario',
-        'Operario',
+        'Secretaria',
+        'Lector',
     ],
 
 ];

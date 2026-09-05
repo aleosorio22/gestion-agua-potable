@@ -2,15 +2,25 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use OwenIt\Auditing\Contracts\Auditable;
 
-class EvidenciaLectura extends Model
+class EvidenciaLectura extends Model implements Auditable
 {
+    use HasFactory;
+    use \OwenIt\Auditing\Auditable;
+
     protected $table = 'evidencias_lectura';
 
     protected $fillable = [
         'lectura_id',
-        'archivo_url',
+        'disco',
+        'ruta',
+        'nombre_original',
+        'mime',
+        'tamano_bytes',
+        'hash_sha256',
         'descripcion',
         'subido_por',
     ];
@@ -20,7 +30,7 @@ class EvidenciaLectura extends Model
         return $this->belongsTo(Lectura::class);
     }
 
-    // Operario que subió la evidencia
+    // Lector que subió la evidencia
     public function subidoPor()
     {
         return $this->belongsTo(User::class, 'subido_por');

@@ -11,14 +11,27 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use OwenIt\Auditing\Contracts\Auditable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'cliente_id'])]
+#[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements Auditable, FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable;
+
+    use \OwenIt\Auditing\Auditable;
+
+    /**
+     * Nunca registrar credenciales en la bitácora.
+     *
+     * @var array<int, string>
+     */
+    protected $auditExclude = [
+        'password',
+        'remember_token',
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -50,9 +63,13 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasAnyRole($rolesConAcceso);
     }
 
-    // El cliente al que pertenece este login (solo aplica al rol Cliente)
-    public function cliente()
+    public function lecturas()
     {
-        return $this->belongsTo(Cliente::class);
+        return $this->hasMany(Lectura::class, 'usuario_id');
+    }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'usuario_id');
     }
 }

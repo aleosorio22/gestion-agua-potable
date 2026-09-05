@@ -64,7 +64,10 @@ Los seeders corren en este orden y son idempotentes: se pueden repetir sin dupli
 | `ShieldSeeder` | Genera los permisos de Filament Shield y arma el rol `super_admin` con todos ellos |
 | `RoleSeeder` | Crea los roles de negocio definidos en `config/admin.php` |
 | `AdminUserSeeder` | Crea el administrador inicial y le asigna `super_admin` |
-| `PajaSeeder` | Carga las pajas base (1, 1/2 y 1/4) con su equivalencia en m³ |
+| `ConfiguracionSeeder` | Datos de la entidad (nombre, NIT, dirección) que salen en la boleta |
+| `CatalogosSeeder` | Pajas, métodos de pago y tipos de documento |
+| `SerieDocumentoSeeder` | Series correlativas de boletas y recibos |
+| `PeriodoSeeder` | Abre el período del mes en curso |
 
 El orden importa: `AdminUserSeeder` va después de `ShieldSeeder` porque necesita que el rol `super_admin` ya exista.
 
@@ -74,7 +77,7 @@ El orden importa: `AdminUserSeeder` va después de `ShieldSeeder` porque necesit
 
 Quién entra a `/admin` se controla en `config/admin.php`:
 
-- `panel_roles` — roles internos con acceso: Administrador, Secretario, Operario
+- `panel_roles` — roles internos con acceso: Administrador, Secretaria, Lector
 - El rol `Cliente` queda fuera a propósito: su acceso será el portal de autoservicio
 
 ## Permisos
@@ -90,26 +93,41 @@ Eso crea las policies en `app/Policies` (son archivos y van commiteados) y sincr
 ## Modelo de datos
 
 ```
-clientes ──< contadores >── pajas ──< tarifas
-    │            │                       │
-    │            └──< lecturas ──< evidencias_lectura
-    │                    │
-    └──< documentos_cliente
-                         │
-              facturas ──┴── (cliente, lectura, tarifa)
-                  │
-                  └──< pagos
+sectores ──< predios ──< contadores >── clientes
+                 │            │              │
+                 │            │         pajas┘ └──< tarifas
+                 │            │
+                 │       lecturas >── periodos
+                 │            │
+                 │            ├──< evidencias_lectura
+                 │            │
+                 │        boletas ──< pagos
+                 │            │           │
+                 │     series_documento ──┘
+                 │
+                 └──< documentos >── tipos_documento
 ```
 
 Decisiones que conviene conocer antes de tocar el esquema:
 
-- **`lecturas.consumo_m3` es una columna generada (STORED)**. La calcula la base de datos como `lectura_actual - lectura_anterior`. No está en `$fillable` y no se debe escribir desde Eloquent.
-- **`lecturas` tiene único `(contador_id, periodo)`**. Un contador no se lee dos veces en el mismo período, aunque haya doble clic o reintento de red.
-- **`facturas.lectura_id` es único**. Una lectura genera como mucho una factura.
-- **`clientes` y `contadores` usan borrado lógico**. Un contador dado de baja conserva su código: para reutilizarlo hay que restaurar el registro, no crear uno nuevo.
-- **Las tarifas se versionan por fecha**. `vigente_hasta = NULL` significa que es la tarifa vigente. MySQL no soporta índices únicos parciales, así que **nada impide a nivel de esquema que haya dos tarifas abiertas para la misma paja**: esa invariante depende del Service/Observer que todavía está pendiente.
-- **Los pagos no se editan ni se borran**. Es regla de negocio y se refuerza en las policies, no en el esquema.
-- **Auditoría**: los modelos del dominio implementan `Auditable` (owen-it/laravel-auditing) y escriben en la tabla `audits`.
+- **Predio y contador son cosas distintas.** El predio es la propiedad (permanente, con dirección estructurada); el contador es el aparato, que se reemplaza. Un cliente puede tener servicio en varios predios.
+- **Los documentos con `predio_id` respaldan esa propiedad** (recibo de luz, escritura); los que lo tienen en `NULL` son de la persona (DPI, NIT).
+- **`lecturas.consumo_m3` es una columna generada (STORED)**. La calcula la base de datos. No está en `$fillable` y no se debe escribir desde Eloquent.
+- **`lecturas` tiene único `(contador_id, periodo_id)`** y `boletas.lectura_id` es único: no se cobra dos veces el mismo consumo.
+- **Las tarifas no guardan fecha de fin.** Rigen desde `vigente_desde` hasta que empieza la siguiente; la vigente es la más reciente que ya empezó (`Tarifa::vigenteEn()`). Así no existen solapamientos ni huecos. El rango completo se consulta en la vista `tarifas_vigencia` o con el accessor `$tarifa->vigente_hasta`.
+- **Las boletas no tienen columna `estado`.** Pagada, pendiente y vencida se derivan de los pagos y la fecha, así que no se desincronizan. Solo la anulación se almacena, con autor y motivo.
+- **Boleta ≠ factura.** La boleta es el documento interno; la factura electrónica (FEL) es tributaria, su serie y número los asigna el certificador, y va en una tabla aparte que aún no existe.
+- **Los correlativos son configurables** por entidad en `series_documento` (prefijo, separador, año, dígitos). El folio se congela al emitir: cambiar el formato no reescribe documentos ya entregados.
+- **Boletas y pagos son inmutables.** Los observers lo impiden: una boleta se anula, un pago se revierte. Nunca se editan ni se borran.
+- **Un período cerrado no admite lecturas nuevas ni cambios.**
+- **Auditoría**: todos los modelos del dominio, más `User`, roles y permisos, escriben en `audits`. `audit.console` está activo, así que los cambios por consola también quedan.
+
+## Servicios
+
+La lógica que el esquema no puede imponer vive en `app/Services`:
+
+- **`EmisorBoletas`** — valida período abierto, busca la tarifa vigente, calcula el monto y reserva el correlativo dentro de una transacción.
+- **`RegistradorPagos`** — valida saldo y referencia, y emite el recibo numerado.
 
 ## Pruebas
 
@@ -129,4 +147,8 @@ Las pruebas corren sobre SQLite en memoria (ver `phpunit.xml`), no sobre MySQL. 
 
 ## Estado del proyecto
 
-El modelado de datos, los roles y el acceso al panel están terminados. **Todavía no existen Resources de Filament** (`app/Filament/`), así que el panel arranca vacío: la capa de CRUD es el siguiente paso, junto con el Service que calcula el monto de la factura a partir de la tarifa vigente.
+El modelado de datos, los roles, el acceso al panel y los servicios de emisión y cobro están terminados y cubiertos por pruebas.
+
+**Todavía no existen Resources de Filament** (`app/Filament/`), así que el panel arranca vacío. Ese es el siguiente paso: las pantallas de Cliente, Predio, Contador, Tarifa, Lectura, Boleta y Pago, más el recibo imprimible.
+
+Pendiente también: la factura electrónica (FEL) como función premium, en la tabla `documentos_fiscales` que aún no se creó — está pensada como tabla aparte con relación 1:1 opcional contra `boletas`, así que agregarla no requerirá tocar el esquema existente.

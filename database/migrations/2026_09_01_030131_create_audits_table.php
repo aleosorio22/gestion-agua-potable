@@ -19,19 +19,21 @@ return new class extends Migration
             $morphPrefix = config('audit.user.morph_prefix', 'user');
 
             $table->bigIncrements('id');
-            $table->string($morphPrefix . '_type')->nullable();
-            $table->unsignedBigInteger($morphPrefix . '_id')->nullable();
+            $table->string($morphPrefix.'_type')->nullable();
+            $table->unsignedBigInteger($morphPrefix.'_id')->nullable();
             $table->string('event');
             $table->morphs('auditable');
-            $table->text('old_values')->nullable();
-            $table->text('new_values')->nullable();
+            // json en vez de text: MySQL 8 valida el contenido y permite
+            // consultarlo, p. ej. "todos los cambios donde se tocó el monto".
+            $table->json('old_values')->nullable();
+            $table->json('new_values')->nullable();
             $table->text('url')->nullable();
             $table->ipAddress('ip_address')->nullable();
             $table->string('user_agent', 1023)->nullable();
             $table->string('tags')->nullable();
             $table->timestamps();
 
-            $table->index([$morphPrefix . '_id', $morphPrefix . '_type']);
+            $table->index([$morphPrefix.'_id', $morphPrefix.'_type']);
         });
     }
 
