@@ -21,7 +21,8 @@ class PagoFactory extends Factory
         $ejercicio = (int) now()->year;
 
         return [
-            'serie_id' => SerieDocumento::factory()->paraRecibos(),
+            'serie_id' => fn (): int => SerieDocumento::activaPara('recibo_pago')?->id
+                ?? SerieDocumento::factory()->paraRecibos()->create()->id,
             'ejercicio' => $ejercicio,
             'numero' => $numero,
             'folio' => 'REC-'.$ejercicio.str_pad((string) $numero, 6, '0', STR_PAD_LEFT),

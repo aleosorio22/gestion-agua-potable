@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EsCatalogo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +19,19 @@ use OwenIt\Auditing\Contracts\Auditable;
  */
 class SerieDocumento extends Model implements Auditable
 {
+    use EsCatalogo;
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
 
     protected $table = 'series_documento';
+
+    /**
+     * Marca que el correlativo lo está moviendo reservarNumero() y no una
+     * edición a mano. SerieDocumentoObserver lo consulta para distinguirlos:
+     * adivinarlo a partir del salto del número es frágil, porque el reinicio
+     * anual reserva y avanza en la misma pasada.
+     */
+    public bool $reservandoCorrelativo = false;
 
     protected $fillable = [
         'tipo_documento',
@@ -108,7 +118,9 @@ class SerieDocumento extends Model implements Auditable
         $ejercicio = (int) $serie->ejercicio;
 
         $serie->siguiente_numero = $numero + 1;
+        $serie->reservandoCorrelativo = true;
         $serie->save();
+        $serie->reservandoCorrelativo = false;
 
         $this->refresh();
 
@@ -119,11 +131,31 @@ class SerieDocumento extends Model implements Auditable
         ];
     }
 
+    /**
+     * Si la serie ya entregó al menos un documento. A partir de ese momento su
+     * formato queda congelado: los folios ya impresos no se pueden reescribir.
+     */
+    public function haEmitido(): bool
+    {
+        return $this->estaEnUso();
+    }
+
     public static function activaPara(string $tipoDocumento): ?self
     {
         return static::query()
             ->where('tipo_documento', $tipoDocumento)
             ->where('activa', true)
             ->first();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function relacionesQueImpidenBorrado(): array
+    {
+        return [
+            'boletas' => 'boleta emitida|boletas emitidas',
+            'pagos' => 'recibo emitido|recibos emitidos',
+        ];
     }
 }
