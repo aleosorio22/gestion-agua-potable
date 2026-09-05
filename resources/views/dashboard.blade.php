@@ -10,7 +10,7 @@
 
         <div class="mb-4">
             <h4 class="fw-semibold mb-1">
-                Bienvenido 👋
+                Bienvenido este contenido se actualizo 👋
             </h4>
 
             <p class="text-muted mb-0">
