@@ -10,11 +10,13 @@ use Filament\Support\Contracts\HasLabel;
  */
 enum GrupoNavegacion: string implements HasLabel
 {
+    case Padron = 'padron';
     case Catalogos = 'catalogos';
 
     public function getLabel(): string
     {
         return match ($this) {
+            self::Padron => 'Padrón',
             self::Catalogos => 'Catálogos',
         };
     }

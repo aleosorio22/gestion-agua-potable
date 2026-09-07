@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EsCatalogo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -12,6 +13,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  */
 class Contador extends Model implements Auditable
 {
+    use EsCatalogo;
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
     use SoftDeletes;
@@ -31,6 +33,19 @@ class Contador extends Model implements Auditable
     {
         return [
             'fecha_instalacion' => 'date',
+        ];
+    }
+
+    /**
+     * Un contador que ya tiene lecturas no se borra: se marca inactivo o
+     * dañado. Las lecturas son el respaldo de lo que se cobró.
+     *
+     * @return array<string, string>
+     */
+    public function relacionesQueImpidenBorrado(): array
+    {
+        return [
+            'lecturas' => 'lectura|lecturas',
         ];
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EsCatalogo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -12,6 +13,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  */
 class Predio extends Model implements Auditable
 {
+    use EsCatalogo;
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
     use SoftDeletes;
@@ -34,6 +36,19 @@ class Predio extends Model implements Auditable
         return [
             'latitud' => 'decimal:7',
             'longitud' => 'decimal:7',
+        ];
+    }
+
+    /**
+     * Un predio con medidor instalado no se borra: el medidor se cambia, la
+     * propiedad sigue ahí. La FK ya es restrictOnDelete.
+     *
+     * @return array<string, string>
+     */
+    public function relacionesQueImpidenBorrado(): array
+    {
+        return [
+            'contadores' => 'contador|contadores',
         ];
     }
 
