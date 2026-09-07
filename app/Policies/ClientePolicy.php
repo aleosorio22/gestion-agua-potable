@@ -47,14 +47,19 @@ class ClientePolicy
         return $authUser->can('Restore:Cliente');
     }
 
+    /**
+     * Nadie borra a un cliente de la base, ni con permiso de Shield: un titular
+     * del servicio respalda boletas y pagos que la entidad tiene que poder
+     * mostrar años después. Lo más lejos que llega la baja es `deleted_at`.
+     */
     public function forceDelete(AuthUser $authUser, Cliente $cliente): bool
     {
-        return $authUser->can('ForceDelete:Cliente');
+        return false;
     }
 
     public function forceDeleteAny(AuthUser $authUser): bool
     {
-        return $authUser->can('ForceDeleteAny:Cliente');
+        return false;
     }
 
     public function restoreAny(AuthUser $authUser): bool
