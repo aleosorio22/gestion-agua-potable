@@ -3,12 +3,12 @@
 namespace App\Models\Concerns;
 
 /**
- * Comportamiento común de los catálogos.
+ * Comportamiento común de los catálogos y del padrón de clientes.
  *
- * En una entidad pública una fila de catálogo que ya respalda documentos
- * emitidos no se borra: se desactiva. Las claves foráneas ya son
- * `restrictOnDelete`, así que el motor lo impide de todas formas; este trait
- * solo traduce ese candado a un mensaje entendible antes de chocar con él.
+ * En una entidad pública una fila que ya respalda documentos emitidos no se
+ * borra: se desactiva. Las claves foráneas ya son `restrictOnDelete`, así que
+ * el motor lo impide de todas formas; este trait solo traduce ese candado a un
+ * mensaje entendible antes de chocar con él.
  */
 trait EsCatalogo
 {

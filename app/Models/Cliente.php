@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EsCatalogo;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Cliente extends Model implements Auditable
 {
+    use EsCatalogo;
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
     use SoftDeletes;
@@ -26,17 +31,33 @@ class Cliente extends Model implements Auditable
         'estado',
     ];
 
-    public function contadores()
+    /**
+     * Un cliente que ya tiene contadores, boletas o expediente no se borra:
+     * se pasa a inactivo. La baja lógica queda para el alta duplicada o
+     * tecleada por error, que es lo único que no deja rastro que conservar.
+     *
+     * @return array<string, string>
+     */
+    public function relacionesQueImpidenBorrado(): array
+    {
+        return [
+            'contadores' => 'contador|contadores',
+            'boletas' => 'boleta|boletas',
+            'documentos' => 'documento|documentos',
+        ];
+    }
+
+    public function contadores(): HasMany
     {
         return $this->hasMany(Contador::class);
     }
 
-    public function boletas()
+    public function boletas(): HasMany
     {
         return $this->hasMany(Boleta::class);
     }
 
-    public function documentos()
+    public function documentos(): HasMany
     {
         return $this->hasMany(Documento::class);
     }
@@ -44,7 +65,7 @@ class Cliente extends Model implements Auditable
     /**
      * Los predios donde este cliente tiene servicio, vía sus contadores.
      */
-    public function predios()
+    public function predios(): HasManyThrough
     {
         return $this->hasManyThrough(
             Predio::class,
@@ -57,9 +78,9 @@ class Cliente extends Model implements Auditable
     }
 
     /**
-     * Scope a query to only include active clients.
+     * Solo los clientes con el servicio vigente.
      */
-    public function scopeActivos($query)
+    public function scopeActivos(Builder $query): Builder
     {
         return $query->where('estado', 'activo');
     }
