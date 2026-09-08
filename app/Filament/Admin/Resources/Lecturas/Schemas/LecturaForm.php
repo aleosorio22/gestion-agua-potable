@@ -12,6 +12,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -40,7 +41,7 @@ class LecturaForm
                             ->label('Período')
                             ->relationship('periodo', 'id', fn ($query) => $query->abiertos()->orderByDesc('fecha_inicio'))
                             ->getOptionLabelFromRecordUsing(fn (Periodo $record): string => $record->etiqueta)
-                            ->default(fn (): ?int => Periodo::abiertos()->orderByDesc('fecha_inicio')->value('id'))
+                            ->default(fn (): ?int => Periodo::vigente()?->id)
                             ->required()
                             ->native(false)
                             ->live()
@@ -121,45 +122,7 @@ class LecturaForm
                 Section::make('Marcador del medidor')
                     ->description('El consumo lo calcula la base de datos como la diferencia entre ambas cifras; no se escribe a mano.')
                     ->columns(3)
-                    ->schema([
-                        TextInput::make('lectura_anterior')
-                            ->label('Lectura anterior')
-                            ->required()
-                            ->numeric()
-                            ->minValue(0)
-                            ->step(0.01)
-                            ->suffix('m³')
-                            ->default(0)
-                            // De solo lectura, pero se guarda: `disabled()` sin
-                            // `dehydrated()` mandaría null y la columna es NOT NULL.
-                            ->disabled()
-                            ->dehydrated()
-                            ->helperText('La última registrada de este contador.'),
-
-                        TextInput::make('lectura_actual')
-                            ->label('Lectura actual')
-                            ->required()
-                            ->numeric()
-                            ->minValue(0)
-                            ->step(0.01)
-                            ->suffix('m³')
-                            ->live(onBlur: true)
-                            ->gte('lectura_anterior')
-                            ->validationMessages([
-                                'gte' => 'La lectura actual no puede ser menor que la anterior. Si el medidor fue reemplazado, registre el cambio de contador.',
-                            ])
-                            ->helperText('El número que marca el medidor hoy.'),
-
-                        // `consumo_m3` es una columna generada (STORED): no es
-                        // un campo del formulario, solo el número que el lector
-                        // confirma de un vistazo antes de guardar.
-                        Placeholder::make('consumo_calculado')
-                            ->label('Consumo del período')
-                            ->content(fn (Get $get): string => number_format(
-                                max(0, (float) $get('lectura_actual') - (float) $get('lectura_anterior')),
-                                2
-                            ).' m³'),
-                    ]),
+                    ->schema(static::camposDelMarcador()),
 
                 Section::make('Notas de campo')
                     ->schema([
@@ -173,5 +136,57 @@ class LecturaForm
             // Una lectura facturada es el origen del snapshot de la boleta: si
             // cambia, boleta y lectura quedan contradiciéndose.
             ->disabled(fn (?Lectura $record): bool => $record?->esta_facturada ?? false);
+    }
+
+    /**
+     * Las dos cifras del medidor y el consumo que sale de restarlas.
+     *
+     * Vive aparte porque la Ruta de lectura pide un modal con solo esto: si la
+     * validación del marcador se escribiera dos veces, tarde o temprano las dos
+     * pantallas dejarían de cobrar igual.
+     *
+     * @return array<int, Component>
+     */
+    public static function camposDelMarcador(): array
+    {
+        return [
+            TextInput::make('lectura_anterior')
+                ->label('Lectura anterior')
+                ->required()
+                ->numeric()
+                ->minValue(0)
+                ->step(0.01)
+                ->suffix('m³')
+                ->default(0)
+                // De solo lectura, pero se guarda: `disabled()` sin
+                // `dehydrated()` mandaría null y la columna es NOT NULL.
+                ->disabled()
+                ->dehydrated()
+                ->helperText('La última registrada de este contador.'),
+
+            TextInput::make('lectura_actual')
+                ->label('Lectura actual')
+                ->required()
+                ->numeric()
+                ->minValue(0)
+                ->step(0.01)
+                ->suffix('m³')
+                ->live(onBlur: true)
+                ->gte('lectura_anterior')
+                ->validationMessages([
+                    'gte' => 'La lectura actual no puede ser menor que la anterior. Si el medidor fue reemplazado, registre el cambio de contador.',
+                ])
+                ->helperText('El número que marca el medidor hoy.'),
+
+            // `consumo_m3` es una columna generada (STORED): no es un campo del
+            // formulario, solo el número que el lector confirma de un vistazo
+            // antes de guardar.
+            Placeholder::make('consumo_calculado')
+                ->label('Consumo del período')
+                ->content(fn (Get $get): string => number_format(
+                    max(0, (float) $get('lectura_actual') - (float) $get('lectura_anterior')),
+                    2
+                ).' m³'),
+        ];
     }
 }

@@ -85,7 +85,7 @@ class LecturasTable
                         ->all())
                     // Arranca en el período abierto: es sobre el que se trabaja
                     // todos los días, y verlo mezclado con el histórico no ayuda.
-                    ->default(fn (): ?int => Periodo::abiertos()->orderByDesc('fecha_inicio')->value('id')),
+                    ->default(fn (): ?int => Periodo::vigente()?->id),
 
                 SelectFilter::make('sector')
                     ->label('Sector')

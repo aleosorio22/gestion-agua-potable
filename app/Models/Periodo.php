@@ -110,6 +110,23 @@ class Periodo extends Model implements Auditable
         return $query->whereNull('cerrado_en');
     }
 
+    /**
+     * El período sobre el que se trabaja hoy: el abierto que contiene la fecha
+     * de hoy y, si no hay ninguno, el abierto más reciente.
+     *
+     * Tomar solo el más reciente deja al lector parado dentro de un mes abierto
+     * por adelantado, donde la visita de hoy ni siquiera cae en el rango.
+     */
+    public static function vigente(): ?self
+    {
+        $hoy = now()->toDateString();
+
+        return static::abiertos()
+            ->orderByRaw('(fecha_inicio <= ? and fecha_fin >= ?) desc', [$hoy, $hoy])
+            ->orderByDesc('fecha_inicio')
+            ->first();
+    }
+
     public function cerrar(User $usuario): void
     {
         $this->update([
