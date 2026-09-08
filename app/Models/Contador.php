@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\EsCatalogo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -69,6 +70,24 @@ class Contador extends Model implements Auditable
     public function lecturas()
     {
         return $this->hasMany(Lectura::class);
+    }
+
+    /**
+     * Las boletas emitidas por este servicio, vía sus lecturas.
+     *
+     * El recibo del vecino se arma por servicio y no por persona: quien tiene
+     * dos medidores recibe dos documentos, cada uno con la deuda de su tarjeta.
+     */
+    public function boletas(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            Boleta::class,
+            Lectura::class,
+            'contador_id',
+            'lectura_id',
+            'id',
+            'id'
+        );
     }
 
     public function scopeActivos($query)

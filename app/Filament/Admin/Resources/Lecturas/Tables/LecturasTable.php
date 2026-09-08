@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Lecturas\Tables;
 
+use App\Filament\Admin\Support\AccionesBoleta;
 use App\Models\Lectura;
 use App\Models\Periodo;
 use Filament\Actions\DeleteAction;
@@ -105,6 +106,8 @@ class LecturasTable
                     ),
             ])
             ->recordActions([
+                AccionesBoleta::emitir(),
+
                 EditAction::make()
                     ->disabled(fn (Lectura $record): bool => $record->esta_facturada)
                     ->tooltip(fn (Lectura $record): ?string => $record->esta_facturada
@@ -121,7 +124,9 @@ class LecturasTable
                         : null)
                     ->modalDescription(fn (Model $record): string => "Se borrará la lectura del contador {$record->contador->codigo}. El contador volverá a aparecer como pendiente en este período."),
             ])
-            ->toolbarActions([])
+            ->toolbarActions([
+                AccionesBoleta::emitirEnLote(),
+            ])
             ->emptyStateHeading('Todavía no hay lecturas en este período')
             ->emptyStateDescription('Registre la primera visita para que se pueda emitir la boleta.');
     }

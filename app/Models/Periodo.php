@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Filament\Admin\Support\MesesDelAnio;
 use App\Models\Concerns\EsCatalogo;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -103,6 +104,14 @@ class Periodo extends Model implements Auditable
     public function getEtiquetaAttribute(): string
     {
         return sprintf('%04d-%02d', $this->anio, $this->mes);
+    }
+
+    /**
+     * Cómo se nombra el mes en el recibo impreso: «Agosto - 2026».
+     */
+    public function getEtiquetaLargaAttribute(): string
+    {
+        return MesesDelAnio::nombre($this->mes).' - '.$this->anio;
     }
 
     public function scopeAbiertos($query)
