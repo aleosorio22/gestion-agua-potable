@@ -64,6 +64,9 @@ class Cliente extends Model implements Auditable
 
     /**
      * Los predios donde este cliente tiene servicio, vía sus contadores.
+     *
+     * `distinct` con columna porque dos contadores en la misma propiedad la
+     * repetirían, y sin nombrar la columna el `count()` la ignora.
      */
     public function predios(): HasManyThrough
     {
@@ -74,7 +77,7 @@ class Cliente extends Model implements Auditable
             'id',
             'id',
             'predio_id'
-        );
+        )->distinct('predios.id');
     }
 
     /**

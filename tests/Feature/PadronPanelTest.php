@@ -119,6 +119,58 @@ it('deshabilita el borrado de un predio con contador instalado', function () {
         ->assertTableActionEnabled('delete', $libre);
 });
 
+it('muestra en el predio los titulares que le llegan por sus contadores', function () {
+    $predio = Predio::factory()->create();
+    $conServicio = Cliente::factory()->create(['nombre' => 'María Xicay']);
+    $suelto = Predio::factory()->create();
+
+    Contador::factory()->create(['predio_id' => $predio->id, 'cliente_id' => $conServicio->id]);
+
+    expect($predio->clientes()->pluck('nombre')->all())->toBe(['María Xicay'])
+        ->and($suelto->clientes()->count())->toBe(0);
+
+    Livewire::test(PredioResource::getPages()['index']->getPage())
+        ->assertSuccessful()
+        ->assertCanSeeTableRecords([$predio, $suelto]);
+});
+
+it('no repite al titular que tiene dos contadores en el mismo predio', function () {
+    $predio = Predio::factory()->create();
+    $cliente = Cliente::factory()->create();
+
+    Contador::factory()->count(2)->create([
+        'predio_id' => $predio->id,
+        'cliente_id' => $cliente->id,
+    ]);
+
+    expect($predio->clientes()->count())->toBe(1)
+        ->and($cliente->predios()->count())->toBe(1);
+});
+
+it('separa los predios con contador de los que quedaron sueltos', function () {
+    $conContador = Contador::factory()->create()->predio;
+    $suelto = Predio::factory()->create();
+
+    Livewire::test(PredioResource::getPages()['index']->getPage())
+        ->filterTable('sin_contador', true)
+        ->assertCanSeeTableRecords([$conContador])
+        ->assertCanNotSeeTableRecords([$suelto])
+        ->filterTable('sin_contador', false)
+        ->assertCanSeeTableRecords([$suelto])
+        ->assertCanNotSeeTableRecords([$conContador]);
+});
+
+it('filtra los predios por titular', function () {
+    $cliente = Cliente::factory()->create();
+    $suyo = Contador::factory()->create(['cliente_id' => $cliente->id])->predio;
+    $ajeno = Contador::factory()->create()->predio;
+
+    Livewire::test(PredioResource::getPages()['index']->getPage())
+        ->filterTable('cliente', $cliente->id)
+        ->assertCanSeeTableRecords([$suyo])
+        ->assertCanNotSeeTableRecords([$ajeno]);
+});
+
 it('no permite el borrado definitivo de contadores ni de predios', function () {
     expect(auth()->user()->can('forceDelete', Contador::factory()->create()))->toBeFalse()
         ->and(auth()->user()->can('forceDelete', Predio::factory()->create()))->toBeFalse();

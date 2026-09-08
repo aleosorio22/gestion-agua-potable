@@ -7,6 +7,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\RestoreAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,6 +40,16 @@ class PrediosTable
                     ->placeholder('Sin sector')
                     ->sortable(),
 
+                // El predio no guarda titular: sale de los contadores que
+                // tiene instalados. Un predio sin ninguno es una dirección
+                // registrada a la que todavía no le llega el servicio.
+                TextColumn::make('clientes.nombre')
+                    ->label('Titular')
+                    ->placeholder('Sin contador instalado')
+                    ->listWithLineBreaks()
+                    ->limitList(2)
+                    ->expandableLimitedList(),
+
                 TextColumn::make('referencia')
                     ->label('Referencia')
                     ->limit(40)
@@ -63,6 +74,7 @@ class PrediosTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('clientes'))
             ->defaultSort('aldea')
             ->filters([
                 SelectFilter::make('sector_id')
@@ -70,6 +82,23 @@ class PrediosTable
                     ->relationship('sector', 'nombre')
                     ->searchable()
                     ->preload(),
+
+                SelectFilter::make('cliente')
+                    ->label('Titular')
+                    ->relationship('clientes', 'nombre')
+                    ->searchable()
+                    ->preload(),
+
+                TernaryFilter::make('sin_contador')
+                    ->label('Contador instalado')
+                    ->placeholder('Todos')
+                    ->trueLabel('Con contador')
+                    ->falseLabel('Sin contador')
+                    ->queries(
+                        true: fn (Builder $query): Builder => $query->has('contadores'),
+                        false: fn (Builder $query): Builder => $query->doesntHave('contadores'),
+                        blank: fn (Builder $query): Builder => $query,
+                    ),
 
                 TrashedFilter::make()
                     ->label('Eliminados'),

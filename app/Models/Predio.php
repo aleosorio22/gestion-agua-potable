@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\EsCatalogo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -65,6 +66,28 @@ class Predio extends Model implements Auditable
     public function documentos()
     {
         return $this->hasMany(Documento::class);
+    }
+
+    /**
+     * Los titulares con servicio en este predio, vía los contadores instalados.
+     *
+     * El predio no guarda `cliente_id` a propósito: el titular cambia cuando la
+     * propiedad se vende y el predio no, y un mismo terreno puede tener dos
+     * medidores a nombre de personas distintas.
+     *
+     * El `distinct` lleva columna a propósito: sin ella Laravel la descarta al
+     * compilar un `count()`, porque el agregado va sobre `*`.
+     */
+    public function clientes(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            Cliente::class,
+            Contador::class,
+            'predio_id',
+            'id',
+            'id',
+            'cliente_id'
+        )->distinct('clientes.id');
     }
 
     /**
