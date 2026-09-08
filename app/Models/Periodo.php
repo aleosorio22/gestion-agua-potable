@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\EsCatalogo;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -11,6 +13,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  */
 class Periodo extends Model implements Auditable
 {
+    use EsCatalogo;
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
 
@@ -31,6 +34,49 @@ class Periodo extends Model implements Auditable
             'fecha_inicio' => 'date',
             'fecha_fin' => 'date',
             'cerrado_en' => 'datetime',
+        ];
+    }
+
+    /**
+     * Un período que ya recibió lecturas o emitió boletas no se borra. Uno
+     * vacío sí: `periodos` no tiene baja lógica, así que el mes abierto por
+     * equivocación se elimina de verdad.
+     *
+     * @return array<string, string>
+     */
+    public function relacionesQueImpidenBorrado(): array
+    {
+        return [
+            'lecturas' => 'lectura|lecturas',
+            'boletas' => 'boleta|boletas',
+        ];
+    }
+
+    /**
+     * Los datos del período que toca abrir: el mes siguiente al último
+     * registrado, o el mes en curso si todavía no hay ninguno.
+     *
+     * Evita que el rango de fechas se teclee a mano, que es de donde salen los
+     * períodos que no calzan con el mes que dicen cubrir.
+     *
+     * @return array{anio: int, mes: int, fecha_inicio: string, fecha_fin: string}
+     */
+    public static function siguienteSugerido(): array
+    {
+        $ultimo = static::query()
+            ->orderByDesc('anio')
+            ->orderByDesc('mes')
+            ->first();
+
+        $inicio = $ultimo
+            ? Carbon::create($ultimo->anio, $ultimo->mes, 1)->addMonth()
+            : now()->startOfMonth();
+
+        return [
+            'anio' => $inicio->year,
+            'mes' => $inicio->month,
+            'fecha_inicio' => $inicio->toDateString(),
+            'fecha_fin' => $inicio->copy()->endOfMonth()->toDateString(),
         ];
     }
 

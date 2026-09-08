@@ -38,6 +38,7 @@ class AdminPanelProvider extends PanelProvider
             // recursos, que es alfabético por directorio.
             ->navigationGroups([
                 GrupoNavegacion::Padron->getLabel(),
+                GrupoNavegacion::Operacion->getLabel(),
                 GrupoNavegacion::Catalogos->getLabel(),
             ])
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\Filament\Admin\Pages')
