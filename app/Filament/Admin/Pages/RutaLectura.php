@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Pages;
 
 use App\Filament\Admin\Enums\GrupoNavegacion;
 use App\Filament\Admin\Resources\Lecturas\Schemas\LecturaForm;
+use App\Filament\Admin\Resources\Periodos\PeriodoResource;
 use App\Models\Contador;
 use App\Models\Lectura;
 use App\Models\Periodo;
@@ -99,6 +100,19 @@ class RutaLectura extends Page implements HasTable
 
         return $periodo !== null
             && now()->startOfDay()->betweenIncluded($periodo->fecha_inicio, $periodo->fecha_fin);
+    }
+
+    /**
+     * Lleva a abrir el ciclo cuando no hay ninguno: el aviso explica el
+     * problema, y esto lo resuelve sin hacer buscar la pantalla en el menú.
+     */
+    public function abrirPeriodoAction(): Action
+    {
+        return Action::make('abrirPeriodo')
+            ->label('Abrir período')
+            ->icon(Heroicon::OutlinedCalendarDays)
+            ->visible(fn (): bool => $this->getPeriodo() === null)
+            ->url(PeriodoResource::getUrl('create'));
     }
 
     public function getAvisoProperty(): ?string
@@ -296,14 +310,6 @@ class RutaLectura extends Page implements HasTable
     public function updatedPeriodoId(): void
     {
         $this->resetTable();
-    }
-
-    /**
-     * Sin período abierto la ruta no tiene sentido: no se muestra en el menú.
-     */
-    public static function shouldRegisterNavigation(): bool
-    {
-        return parent::shouldRegisterNavigation() && Periodo::abiertos()->exists();
     }
 
     public static function getNavigationBadge(): ?string

@@ -147,20 +147,25 @@ it('no ofrece registrar cuando hoy queda fuera del periodo', function () {
     $pagina->assertTableActionHidden('registrar', $contador);
 });
 
-it('esconde la ruta del menu si no hay ningun periodo abierto', function () {
-    expect(RutaLectura::shouldRegisterNavigation())->toBeTrue();
-
+it('sigue accesible desde el menu aunque no haya periodo abierto', function () {
     Periodo::query()->update(['cerrado_en' => now()]);
 
-    expect(RutaLectura::shouldRegisterNavigation())->toBeFalse();
+    // Esconderla dejaría al usuario sin botón y sin explicación: la pantalla
+    // existe justamente para decirle que falta abrir el ciclo.
+    expect(RutaLectura::shouldRegisterNavigation())->toBeTrue();
 });
 
-it('avisa en la pantalla cuando no hay periodo abierto', function () {
+it('avisa y ofrece abrir el ciclo cuando no hay periodo abierto', function () {
     Periodo::query()->update(['cerrado_en' => now()]);
 
-    $pagina = Livewire::test(RutaLectura::class);
+    $pagina = Livewire::test(RutaLectura::class)->assertSuccessful();
 
     expect($pagina->instance()->aviso)->toContain('No hay ningún período abierto');
 
-    $pagina->assertSuccessful();
+    $pagina->assertActionVisible('abrirPeriodo');
+});
+
+it('no ofrece abrir un ciclo cuando ya hay uno en curso', function () {
+    Livewire::test(RutaLectura::class)
+        ->assertActionHidden('abrirPeriodo');
 });

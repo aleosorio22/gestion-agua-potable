@@ -1,9 +1,13 @@
 <x-filament-panels::page>
     @if ($this->aviso)
         <x-filament::section>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-                {{ $this->aviso }}
-            </p>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    {{ $this->aviso }}
+                </p>
+
+                {{ $this->abrirPeriodoAction }}
+            </div>
         </x-filament::section>
     @endif
 
