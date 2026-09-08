@@ -13,6 +13,7 @@ class LecturaObserver
     public function creating(Lectura $lectura): void
     {
         $this->verificarPeriodoAbierto($lectura);
+        $this->verificarFechaDentroDelPeriodo($lectura);
         $this->verificarEncadenamiento($lectura);
     }
 
@@ -48,6 +49,37 @@ class LecturaObserver
                 "El período {$periodo->etiqueta} está cerrado y no admite cambios en lecturas."
             );
         }
+    }
+
+    /**
+     * La visita tiene que caer dentro del ciclo que dice cubrir.
+     *
+     * Sin esto el rango de fechas del período es decorativo: una lectura de
+     * marzo se podía guardar en el período de septiembre, y de ahí sale una
+     * boleta calculada con la tarifa vigente en marzo dentro de un mes que
+     * dice cobrar septiembre.
+     */
+    private function verificarFechaDentroDelPeriodo(Lectura $lectura): void
+    {
+        $periodo = $lectura->periodo()->first();
+
+        if ($periodo === null || $lectura->fecha_lectura === null) {
+            return;
+        }
+
+        $fecha = $lectura->fecha_lectura;
+
+        if ($fecha->betweenIncluded($periodo->fecha_inicio, $periodo->fecha_fin)) {
+            return;
+        }
+
+        throw new RuntimeException(sprintf(
+            'La fecha de la visita (%s) no cae dentro del período %s, que va del %s al %s.',
+            $fecha->format('d/m/Y'),
+            $periodo->etiqueta,
+            $periodo->fecha_inicio->format('d/m/Y'),
+            $periodo->fecha_fin->format('d/m/Y'),
+        ));
     }
 
     /**

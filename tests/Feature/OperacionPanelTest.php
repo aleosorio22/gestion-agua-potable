@@ -249,18 +249,80 @@ it('rechaza leer dos veces el mismo contador en un periodo', function () {
 
 it('acepta el mismo contador en otro periodo', function () {
     $ya = Lectura::factory()->create();
-    $otro = Periodo::factory()->create(['anio' => 2027, 'mes' => 6]);
+    $otro = Periodo::factory()->create([
+        'anio' => 2026,
+        'mes' => 8,
+        'fecha_inicio' => '2026-08-01',
+        'fecha_fin' => '2026-08-31',
+    ]);
 
     Livewire::test(LecturaResource::getPages()['create']->getPage())
         ->fillForm([
             'periodo_id' => $otro->id,
             'contador_id' => $ya->contador_id,
-            'fecha_lectura' => now()->toDateString(),
+            'fecha_lectura' => '2026-08-15',
             'lectura_actual' => (float) $ya->lectura_actual + 10,
         ])
         ->call('create')
         ->assertHasNoFormErrors();
 });
+
+it('rechaza una visita fuera del rango del periodo', function () {
+    $periodo = Periodo::factory()->create([
+        'anio' => 2026,
+        'mes' => 8,
+        'fecha_inicio' => '2026-08-01',
+        'fecha_fin' => '2026-08-31',
+    ]);
+    $contador = Contador::factory()->create();
+
+    Livewire::test(LecturaResource::getPages()['create']->getPage())
+        ->fillForm([
+            'periodo_id' => $periodo->id,
+            'contador_id' => $contador->id,
+            'fecha_lectura' => '2026-07-15',
+            'lectura_actual' => 12,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['fecha_lectura']);
+});
+
+it('acepta la visita en los bordes del periodo', function () {
+    $periodo = Periodo::factory()->create([
+        'anio' => 2026,
+        'mes' => 8,
+        'fecha_inicio' => '2026-08-01',
+        'fecha_fin' => '2026-08-31',
+    ]);
+
+    foreach (['2026-08-01', '2026-08-31'] as $fecha) {
+        Livewire::test(LecturaResource::getPages()['create']->getPage())
+            ->fillForm([
+                'periodo_id' => $periodo->id,
+                'contador_id' => Contador::factory()->create()->id,
+                'fecha_lectura' => $fecha,
+                'lectura_actual' => 12,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+    }
+
+    expect(Lectura::where('periodo_id', $periodo->id)->count())->toBe(2);
+});
+
+it('tambien frena la visita fuera del periodo si no pasa por el formulario', function () {
+    $periodo = Periodo::factory()->create([
+        'anio' => 2026,
+        'mes' => 8,
+        'fecha_inicio' => '2026-08-01',
+        'fecha_fin' => '2026-08-31',
+    ]);
+
+    Lectura::factory()->create([
+        'periodo_id' => $periodo->id,
+        'fecha_lectura' => '2026-12-01',
+    ]);
+})->throws(RuntimeException::class, 'no cae dentro del período 2026-08');
 
 it('rechaza una fecha de visita futura', function () {
     $periodo = Periodo::factory()->create();

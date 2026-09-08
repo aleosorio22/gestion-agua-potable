@@ -5,6 +5,8 @@ namespace App\Filament\Admin\Resources\Lecturas\Schemas;
 use App\Models\Contador;
 use App\Models\Lectura;
 use App\Models\Periodo;
+use Carbon\Carbon;
+use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -79,7 +81,41 @@ class LecturaForm
                             ->maxDate(now())
                             ->validationMessages([
                                 'before_or_equal' => 'La fecha de la visita no puede ser futura.',
-                            ]),
+                            ])
+                            // El rango del período no es decorativo: una visita
+                            // fuera de él se cobraría con la tarifa vigente en
+                            // otra fecha, dentro de un mes que dice cubrir otra.
+                            ->rule(static fn (Get $get): Closure => static function (
+                                string $atributo,
+                                mixed $valor,
+                                Closure $fallar
+                            ) use ($get): void {
+                                $periodo = Periodo::find($get('periodo_id'));
+
+                                if ($periodo === null || blank($valor)) {
+                                    return;
+                                }
+
+                                $fecha = Carbon::parse($valor);
+
+                                if ($fecha->betweenIncluded($periodo->fecha_inicio, $periodo->fecha_fin)) {
+                                    return;
+                                }
+
+                                $fallar(sprintf(
+                                    'La visita no cae dentro del período %s, que va del %s al %s.',
+                                    $periodo->etiqueta,
+                                    $periodo->fecha_inicio->format('d/m/Y'),
+                                    $periodo->fecha_fin->format('d/m/Y'),
+                                ));
+                            })
+                            ->helperText(function (Get $get): ?string {
+                                $periodo = Periodo::find($get('periodo_id'));
+
+                                return $periodo
+                                    ? "Debe caer entre el {$periodo->fecha_inicio->format('d/m/Y')} y el {$periodo->fecha_fin->format('d/m/Y')}."
+                                    : null;
+                            }),
                     ]),
 
                 Section::make('Marcador del medidor')
