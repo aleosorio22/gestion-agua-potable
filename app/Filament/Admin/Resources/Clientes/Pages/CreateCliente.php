@@ -9,6 +9,7 @@ use App\Filament\Admin\Resources\Predios\Schemas\PredioForm;
 use App\Models\Cliente;
 use App\Models\Contador;
 use App\Models\Predio;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
@@ -19,6 +20,7 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Alta guiada: la persona, la propiedad y el medidor en una sola secuencia.
@@ -49,7 +51,14 @@ class CreateCliente extends CreateRecord
                 ->label('La persona')
                 ->description('Quién es el titular')
                 ->icon(Heroicon::OutlinedUser)
-                ->schema(ClienteForm::campos()),
+                ->schema([
+                    // Identifica el intento de alta, no al cliente. Viaja con
+                    // el formulario para que reenviarlo no cree dos personas.
+                    Hidden::make('token_alta')
+                        ->default(fn (): string => (string) Str::uuid()),
+
+                    ...ClienteForm::campos(),
+                ]),
 
             Step::make('Predio')
                 ->label('La propiedad')
@@ -108,6 +117,43 @@ class CreateCliente extends CreateRecord
     }
 
     /**
+     * Corta antes de validar si este mismo intento ya quedó registrado.
+     *
+     * Tiene que ser acá y no en el guardado: reenviar el formulario trae el
+     * código que ya se usó, así que la regla `unique` lo rechazaría primero y
+     * el usuario vería «ese código ya existe» en lugar de enterarse de que su
+     * alta sí había funcionado.
+     */
+    protected function beforeValidate(): void
+    {
+        $yaCreado = $this->clientePorToken($this->data['token_alta'] ?? null);
+
+        if ($yaCreado === null) {
+            return;
+        }
+
+        Notification::make()
+            ->warning()
+            ->title('Este alta ya se había registrado')
+            ->body("{$yaCreado->nombre} quedó dado de alta con el código {$yaCreado->codigo}. No se creó por duplicado.")
+            ->send();
+
+        $this->redirect($this->getResource()::getUrl('edit', ['record' => $yaCreado]));
+
+        $this->halt();
+    }
+
+    /**
+     * El cliente que produjo este intento de alta, si ya existe.
+     */
+    private function clientePorToken(?string $token): ?Cliente
+    {
+        return blank($token)
+            ? null
+            : Cliente::where('token_alta', $token)->first();
+    }
+
+    /**
      * Las tres altas van juntas o no va ninguna.
      *
      * @param  array<string, mixed>  $data
@@ -124,6 +170,16 @@ class CreateCliente extends CreateRecord
             ->all();
 
         return DB::transaction(function () use ($modo, $datosCliente, $datosPredio, $datosContador, $predioExistente): Cliente {
+            // Segunda línea, para dos peticiones realmente simultáneas: la de
+            // `beforeValidate()` puede haber mirado antes de que la otra
+            // insertara. El índice único de `token_alta` es el que cierra el
+            // caso extremo en que ni siquiera esta llega a tiempo.
+            $yaCreado = $this->clientePorToken($datosCliente['token_alta'] ?? null);
+
+            if ($yaCreado !== null) {
+                return $yaCreado;
+            }
+
             $cliente = Cliente::create($datosCliente);
 
             if ($modo === 'ninguno') {
