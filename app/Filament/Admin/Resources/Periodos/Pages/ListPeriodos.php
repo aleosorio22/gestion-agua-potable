@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Filament\Admin\Resources\Periodos\Pages;
+
+use App\Filament\Admin\Resources\Periodos\PeriodoResource;
+use Filament\Actions\CreateAction;
+use Filament\Resources\Pages\ListRecords;
+
+class ListPeriodos extends ListRecords
+{
+    protected static string $resource = PeriodoResource::class;
+
+    public function getTitle(): string
+    {
+        return 'Períodos';
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            CreateAction::make()
+                ->label('Abrir período'),
+        ];
+    }
+}

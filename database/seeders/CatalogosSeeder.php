@@ -11,10 +11,12 @@ class CatalogosSeeder extends Seeder
 {
     public function run(): void
     {
+        // En m³, no en litros: es la unidad contra la que se compara el
+        // consumo del período al calcular el excedente.
         $pajas = [
-            ['nombre' => '1 paja', 'equivalencia_m3' => 60000.00],
-            ['nombre' => '1/2 paja', 'equivalencia_m3' => 30000.00],
-            ['nombre' => '1/4 paja', 'equivalencia_m3' => 15000.00],
+            ['nombre' => '1 paja', 'equivalencia_m3' => 60.00],
+            ['nombre' => '1/2 paja', 'equivalencia_m3' => 30.00],
+            ['nombre' => '1/4 paja', 'equivalencia_m3' => 15.00],
         ];
 
         foreach ($pajas as $paja) {
