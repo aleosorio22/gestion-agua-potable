@@ -3,6 +3,9 @@
 use App\Filament\Admin\Resources\Clientes\ClienteResource;
 use App\Models\Boleta;
 use App\Models\Cliente;
+use App\Models\Contador;
+use App\Models\Paja;
+use App\Models\Predio;
 use App\Models\User;
 use Database\Seeders\ShieldSeeder;
 use Filament\Facades\Filament;
@@ -45,25 +48,108 @@ it('pinta el formulario de edicion', function () {
         ->assertSuccessful();
 });
 
-it('guarda un cliente nuevo desde el formulario', function () {
+it('da de alta solo a la persona cuando todavia no tiene servicio', function () {
     Livewire::test(ClienteResource::getPages()['create']->getPage())
         ->fillForm([
             'codigo' => 'CLI-0001',
             'nombre' => 'María Xicay',
             'dpi' => '1234567890101',
             'estado' => 'activo',
+            'modo_predio' => 'ninguno',
         ])
         ->call('create')
         ->assertHasNoFormErrors();
 
-    expect(Cliente::where('codigo', 'CLI-0001')->exists())->toBeTrue();
+    $cliente = Cliente::where('codigo', 'CLI-0001')->first();
+
+    expect($cliente)->not->toBeNull()
+        ->and($cliente->contadores)->toHaveCount(0);
+});
+
+it('da de alta persona, predio y contador en una sola secuencia', function () {
+    $paja = Paja::factory()->create();
+
+    Livewire::test(ClienteResource::getPages()['create']->getPage())
+        ->fillForm([
+            'codigo' => 'CLI-0002',
+            'nombre' => 'Josefa Tzoc',
+            'estado' => 'activo',
+            'modo_predio' => 'nuevo',
+            'predio' => [
+                'aldea' => 'El Porvenir',
+                'numero_casa' => '1-31',
+            ],
+            'contador' => [
+                'codigo' => 'CTR-00500',
+                'paja_id' => $paja->id,
+                'estado' => 'activo',
+            ],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $cliente = Cliente::where('codigo', 'CLI-0002')->first();
+    $contador = $cliente->contadores()->first();
+
+    expect($contador->codigo)->toBe('CTR-00500')
+        ->and($contador->predio->aldea)->toBe('El Porvenir')
+        ->and($contador->predio->numero_casa)->toBe('1-31');
+});
+
+it('reusa una propiedad ya registrada en lugar de duplicarla', function () {
+    $predio = Predio::factory()->create();
+    $paja = Paja::factory()->create();
+    $prediosAntes = Predio::count();
+
+    Livewire::test(ClienteResource::getPages()['create']->getPage())
+        ->fillForm([
+            'codigo' => 'CLI-0003',
+            'nombre' => 'Marta Sicán',
+            'estado' => 'activo',
+            'modo_predio' => 'existente',
+            'predio_existente_id' => $predio->id,
+            'contador' => [
+                'codigo' => 'CTR-00600',
+                'paja_id' => $paja->id,
+                'estado' => 'activo',
+            ],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Predio::count())->toBe($prediosAntes)
+        ->and(Contador::where('codigo', 'CTR-00600')->first()->predio_id)->toBe($predio->id);
+});
+
+it('no deja al cliente creado si el contador viene con un codigo repetido', function () {
+    $existente = Contador::factory()->create(['codigo' => 'CTR-REPETIDO']);
+    $paja = Paja::factory()->create();
+
+    Livewire::test(ClienteResource::getPages()['create']->getPage())
+        ->fillForm([
+            'codigo' => 'CLI-0004',
+            'nombre' => 'Pedro Cúmez',
+            'estado' => 'activo',
+            'modo_predio' => 'nuevo',
+            'predio' => ['aldea' => 'San Antonio'],
+            'contador' => [
+                'codigo' => 'CTR-REPETIDO',
+                'paja_id' => $paja->id,
+                'estado' => 'activo',
+            ],
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['contador.codigo']);
+
+    // Nada se escribe hasta el último paso: el cliente no quedó a medias.
+    expect(Cliente::where('codigo', 'CLI-0004')->exists())->toBeFalse();
 });
 
 it('rechaza un codigo de cliente repetido', function () {
     Cliente::factory()->create(['codigo' => 'CLI-0001']);
 
     Livewire::test(ClienteResource::getPages()['create']->getPage())
-        ->fillForm(['codigo' => 'CLI-0001', 'nombre' => 'Otro vecino', 'estado' => 'activo'])
+        ->fillForm(['codigo' => 'CLI-0001', 'nombre' => 'Otro vecino', 'estado' => 'activo', 'modo_predio' => 'ninguno'])
         ->call('create')
         ->assertHasFormErrors(['codigo']);
 });
@@ -77,6 +163,7 @@ it('rechaza un dpi que ya tiene otro cliente', function () {
             'nombre' => 'Otro vecino',
             'dpi' => '1234567890101',
             'estado' => 'activo',
+            'modo_predio' => 'ninguno',
         ])
         ->call('create')
         ->assertHasFormErrors(['dpi']);
@@ -89,6 +176,7 @@ it('rechaza un dpi que no tiene 13 digitos', function () {
             'nombre' => 'Vecino con DPI corto',
             'dpi' => '12345',
             'estado' => 'activo',
+            'modo_predio' => 'ninguno',
         ])
         ->call('create')
         ->assertHasFormErrors(['dpi']);

@@ -20,6 +20,10 @@ class LecturaFactory extends Factory
      * lectura_anterior arranca en 0 porque LecturaObserver exige que coincida
      * con la última lectura del contador, y por defecto no hay ninguna.
      *
+     * fecha_lectura sale del período y no de hoy: el observer exige que la
+     * visita caiga dentro del ciclo, y los períodos que crea la factory van
+     * avanzando de mes.
+     *
      * @return array<string, mixed>
      */
     public function definition(): array
@@ -30,7 +34,9 @@ class LecturaFactory extends Factory
             'usuario_id' => User::factory(),
             'lectura_anterior' => 0,
             'lectura_actual' => fake()->randomFloat(2, 1, 50),
-            'fecha_lectura' => now()->toDateString(),
+            'fecha_lectura' => fn (array $atributos): string => Periodo::find($atributos['periodo_id'])
+                ?->fecha_inicio
+                ->toDateString() ?? now()->toDateString(),
             'observaciones' => null,
         ];
     }

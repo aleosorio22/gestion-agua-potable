@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Boleta;
+use App\Models\Configuracion;
 use App\Models\Contador;
 use App\Models\Lectura;
 use App\Models\MetodoPago;
@@ -175,3 +176,107 @@ it('no cobra sobre una boleta anulada', function () {
         50.00,
     );
 })->throws(RuntimeException::class, 'está anulada');
+
+it('toma el plazo de vencimiento de la configuracion de la oficina', function () {
+    // El municipio de referencia vence al día siguiente de generar; otras
+    // oficinas dan un mes. El plazo no puede estar clavado en el código.
+    Configuracion::guardar('facturacion.dias_vencimiento', '1');
+
+    ['lectura' => $lectura] = escenarioDeLectura();
+
+    $boleta = app(EmisorBoletas::class)->emitir($lectura);
+
+    expect($boleta->fecha_vencimiento->toDateString())
+        ->toBe(now()->addDay()->toDateString());
+});
+
+it('cae en treinta dias si la configuracion no trae un plazo usable', function () {
+    Configuracion::guardar('facturacion.dias_vencimiento', '0');
+
+    ['lectura' => $lectura] = escenarioDeLectura();
+
+    $boleta = app(EmisorBoletas::class)->emitir($lectura);
+
+    expect($boleta->fecha_vencimiento->toDateString())
+        ->toBe(now()->addDays(30)->toDateString());
+});
+
+it('cobra el excedente con las equivalencias reales de la oficina', function () {
+    // Los recibos del municipio: media paja incluye 30 m³ con canon de Q80, y
+    // el excedente va a Q4 por m³. Un consumo de 21 m³ en un cuarto de paja
+    // (15 m³ incluidos) da 6 m³ de exceso, o sea Q24.
+    SerieDocumento::factory()->create(['tipo_documento' => 'boleta', 'activa' => true]);
+
+    $cuartoDePaja = Paja::factory()->create(['nombre' => '1/4 paja', 'equivalencia_m3' => 15.00]);
+
+    Tarifa::factory()->create([
+        'paja_id' => $cuartoDePaja->id,
+        'monto_base' => 40.00,
+        'precio_m3_excedente' => 4.0000,
+        'vigente_desde' => now()->startOfYear()->toDateString(),
+    ]);
+
+    $contador = Contador::factory()->create(['paja_id' => $cuartoDePaja->id]);
+
+    // El marcador viene de la visita del mes pasado: el observer exige que la
+    // lectura anterior coincida con la última registrada del contador.
+    Lectura::factory()->create([
+        'contador_id' => $contador->id,
+        'periodo_id' => Periodo::factory()->create()->id,
+        'lectura_anterior' => 0,
+        'lectura_actual' => 718,
+    ]);
+
+    $lectura = Lectura::factory()->create([
+        'contador_id' => $contador->id,
+        'periodo_id' => Periodo::factory()->create()->id,
+        'lectura_anterior' => 718,
+        'lectura_actual' => 739,
+    ]);
+
+    $boleta = app(EmisorBoletas::class)->emitir($lectura);
+
+    expect((float) $boleta->consumo_m3)->toBe(21.0)
+        ->and((float) $boleta->monto_base)->toBe(40.0)
+        ->and((float) $boleta->monto_excedente)->toBe(24.0)
+        ->and((float) $boleta->monto)->toBe(64.0);
+});
+
+it('no cobra excedente cuando el consumo queda justo en el limite', function () {
+    // La otra tarjeta del mismo recibo: 30 m³ consumidos con 30 m³ incluidos,
+    // y en el documento no aparece línea de exceso para ese mes.
+    SerieDocumento::factory()->create(['tipo_documento' => 'boleta', 'activa' => true]);
+
+    $mediaPaja = Paja::factory()->create(['nombre' => '1/2 paja', 'equivalencia_m3' => 30.00]);
+
+    Tarifa::factory()->create([
+        'paja_id' => $mediaPaja->id,
+        'monto_base' => 80.00,
+        'precio_m3_excedente' => 4.0000,
+        'vigente_desde' => now()->startOfYear()->toDateString(),
+    ]);
+
+    $contador = Contador::factory()->create(['paja_id' => $mediaPaja->id]);
+
+    // El marcador viene de la visita del mes pasado: el observer exige que la
+    // lectura anterior coincida con la última registrada del contador.
+    Lectura::factory()->create([
+        'contador_id' => $contador->id,
+        'periodo_id' => Periodo::factory()->create()->id,
+        'lectura_anterior' => 0,
+        'lectura_actual' => 1991,
+    ]);
+
+    $lectura = Lectura::factory()->create([
+        'contador_id' => $contador->id,
+        'periodo_id' => Periodo::factory()->create()->id,
+        'lectura_anterior' => 1991,
+        'lectura_actual' => 2021,
+    ]);
+
+    $boleta = app(EmisorBoletas::class)->emitir($lectura);
+
+    expect((float) $boleta->consumo_m3)->toBe(30.0)
+        ->and((float) $boleta->monto_excedente)->toBe(0.0)
+        ->and((float) $boleta->monto)->toBe(80.0);
+});

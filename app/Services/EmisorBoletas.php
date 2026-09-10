@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Boleta;
+use App\Models\Configuracion;
 use App\Models\Lectura;
 use App\Models\SerieDocumento;
 use App\Models\Tarifa;
@@ -19,8 +20,23 @@ use RuntimeException;
 class EmisorBoletas
 {
     public function __construct(
-        private readonly int $diasParaVencer = 30,
+        private readonly ?int $diasParaVencer = null,
     ) {}
+
+    /**
+     * El plazo lo fija cada oficina desde la configuración: el municipio de
+     * referencia vence al día siguiente de generar, otras dan un mes.
+     */
+    private function diasParaVencer(): int
+    {
+        if ($this->diasParaVencer !== null) {
+            return $this->diasParaVencer;
+        }
+
+        $configurado = (int) Configuracion::obtener('facturacion.dias_vencimiento', '30');
+
+        return $configurado > 0 ? $configurado : 30;
+    }
 
     public function emitir(Lectura $lectura): Boleta
     {
@@ -80,7 +96,7 @@ class EmisorBoletas
                 'monto_excedente' => $importes['monto_excedente'],
                 'monto' => $importes['monto'],
                 'fecha_emision' => now()->toDateString(),
-                'fecha_vencimiento' => now()->addDays($this->diasParaVencer)->toDateString(),
+                'fecha_vencimiento' => now()->addDays($this->diasParaVencer())->toDateString(),
             ]);
         });
     }

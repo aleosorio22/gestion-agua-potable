@@ -12,6 +12,7 @@
 /.phpunit.cache
 /.vscode
 /.zed
+/NO SUBIR A GITHUB ESTA CARPETA DOCS
 /auth.json
 /node_modules
 /public/build

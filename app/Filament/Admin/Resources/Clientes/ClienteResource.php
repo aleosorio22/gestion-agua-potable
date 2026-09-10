@@ -2,9 +2,11 @@
 
 namespace App\Filament\Admin\Resources\Clientes;
 
+use App\Filament\Admin\Enums\GrupoNavegacion;
 use App\Filament\Admin\Resources\Clientes\Pages\CreateCliente;
 use App\Filament\Admin\Resources\Clientes\Pages\EditCliente;
 use App\Filament\Admin\Resources\Clientes\Pages\ListClientes;
+use App\Filament\Admin\Resources\Clientes\RelationManagers\ContadoresRelationManager;
 use App\Filament\Admin\Resources\Clientes\Schemas\ClienteForm;
 use App\Filament\Admin\Resources\Clientes\Tables\ClientesTable;
 use App\Models\Cliente;
@@ -16,6 +18,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use UnitEnum;
 
 class ClienteResource extends Resource
 {
@@ -25,7 +28,9 @@ class ClienteResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
-    protected static ?int $navigationSort = 1;
+    protected static string|UnitEnum|null $navigationGroup = GrupoNavegacion::Padron;
+
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $modelLabel = 'cliente';
 
@@ -41,6 +46,13 @@ class ClienteResource extends Resource
     public static function table(Table $table): Table
     {
         return ClientesTable::configure($table);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            ContadoresRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

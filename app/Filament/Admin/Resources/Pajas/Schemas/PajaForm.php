@@ -26,7 +26,7 @@ class PajaForm
                     ->minValue(0.01)
                     ->step(0.01)
                     ->suffix('m³')
-                    ->helperText('Volumen que cubre la cuota fija. Lo que pase de aquí se cobra como excedente.'),
+                    ->helperText('Volumen que cubre la cuota fija, en metros cúbicos y no en litros. Ej.: 30 para media paja. Lo que pase de aquí se cobra como excedente.'),
 
                 Toggle::make('activo')
                     ->label('Activa')

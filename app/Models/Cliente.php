@@ -63,7 +63,27 @@ class Cliente extends Model implements Auditable
     }
 
     /**
+     * Quién(es) tienen acceso de portal a este cliente — histórico completo,
+     * incluye accesos ya revocados. Para el activo, usar accesoActivo().
+     */
+    public function accesos(): HasMany
+    {
+        return $this->hasMany(ClienteAcceso::class);
+    }
+
+    /**
+     * El acceso vigente al portal, si alguien lo tiene otorgado.
+     */
+    public function accesoActivo()
+    {
+        return $this->hasOne(ClienteAcceso::class)->whereNull('revocado_en');
+    }
+
+    /**
      * Los predios donde este cliente tiene servicio, vía sus contadores.
+     *
+     * `distinct` con columna porque dos contadores en la misma propiedad la
+     * repetirían, y sin nombrar la columna el `count()` la ignora.
      */
     public function predios(): HasManyThrough
     {
@@ -74,7 +94,7 @@ class Cliente extends Model implements Auditable
             'id',
             'id',
             'predio_id'
-        );
+        )->distinct('predios.id');
     }
 
     /**
