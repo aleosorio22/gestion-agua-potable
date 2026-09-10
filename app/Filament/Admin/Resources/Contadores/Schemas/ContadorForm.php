@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources\Contadores\Schemas;
 use App\Filament\Admin\Resources\Predios\Schemas\PredioForm;
 use App\Models\Cliente;
 use App\Models\Contador;
+use App\Models\Correlativo;
 use App\Models\Paja;
 use App\Models\Predio;
 use Filament\Forms\Components\DatePicker;
@@ -75,6 +76,7 @@ class ContadorForm
             ->label('Código del contador')
             ->required()
             ->maxLength(30)
+            ->default(fn (): string => Correlativo::siguienteDisponible('contador', Contador::class))
             // La tabla va explícita: dentro del alta guiada el modelo del
             // formulario es Cliente, y sin esto el unique miraría `clientes`.
             ->unique(Contador::class, ignoreRecord: true)
@@ -84,7 +86,7 @@ class ContadorForm
                 // registro con el mismo número grabado en el aparato.
                 'unique' => 'Ese código ya está registrado en otro contador. Si el contador anterior fue eliminado, restáurelo en lugar de crear uno nuevo.',
             ])
-            ->helperText('Como viene grabado en el aparato. Ej.: CTR-00123.');
+            ->helperText('Lo propone el sistema; puede cambiarlo por el número grabado en el aparato si la oficina los registra así.');
     }
 
     public static function campoFechaInstalacion(): DatePicker

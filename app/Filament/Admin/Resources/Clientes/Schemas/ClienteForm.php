@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Clientes\Schemas;
 
 use App\Models\Cliente;
+use App\Models\Correlativo;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -34,11 +35,15 @@ class ClienteForm
                         ->label('Código')
                         ->required()
                         ->maxLength(20)
+                        // Propuesto, no reservado: el número se da por usado
+                        // recién cuando el cliente existe, así una alta
+                        // abandonada no deja un hueco en la numeración.
+                        ->default(fn (): string => Correlativo::siguienteDisponible('cliente', Cliente::class))
                         ->unique(Cliente::class, ignoreRecord: true)
                         ->validationMessages([
                             'unique' => 'Ya existe un cliente con ese código. Si no aparece en el listado, revise los eliminados.',
                         ])
-                        ->helperText('Código corto y estable que el vecino cita en ventanilla. Ej.: CLI-0001.'),
+                        ->helperText('Lo propone el sistema; puede cambiarlo si está cargando un padrón que ya tiene sus propios números.'),
 
                     TextInput::make('nombre')
                         ->label('Nombre completo')
