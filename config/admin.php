@@ -46,7 +46,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Quiénes pueden entrar a /admin. El rol Cliente queda fuera a propósito:
-    | su acceso será el portal de autoservicio, no el panel interno.
+    | su acceso es el portal de autoservicio (/portal), no el panel interno.
     |
     */
 
@@ -54,6 +54,23 @@ return [
         'Administrador',
         'Secretaria',
         'Lector',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Lector de prueba
+    |--------------------------------------------------------------------------
+    |
+    | Credenciales que siembra LectorDemoSeeder, para que cualquiera del
+    | equipo tenga un login de /admin con permisos recortados (rol Lector)
+    | sin crearlo a mano por Tinker cada vez que reconstruye su base local.
+    |
+    */
+
+    'lector_demo' => [
+        'email' => env('LECTOR_DEMO_EMAIL', 'lector@oficina-agua.test'),
+        'password' => env('LECTOR_DEMO_PASSWORD', 'cambiar-esta-clave'),
+        'name' => env('LECTOR_DEMO_NAME', 'Lector de Prueba'),
     ],
 
 ];

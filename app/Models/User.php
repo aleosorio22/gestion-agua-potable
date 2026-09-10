@@ -47,14 +47,19 @@ class User extends Authenticatable implements Auditable, FilamentUser
     }
 
     /**
-     * Quién puede entrar al panel administrativo.
+     * Quién puede entrar a cada panel.
      *
-     * Sin este método Filament aborta con 403 a todo el mundo en cuanto
-     * APP_ENV deja de ser "local" (ver Filament\Http\Middleware\Authenticate),
-     * así que es obligatorio antes de desplegar.
+     * Distingue por $panel->getId(): un rol de staff no basta para entrar al
+     * portal, y el rol Cliente no basta para entrar a /admin. Sin este
+     * chequeo por panel, cualquiera con acceso a un panel podía colarse al
+     * otro, que es justo la separación que el portal necesita garantizar.
      */
     public function canAccessPanel(Panel $panel): bool
     {
+        if ($panel->getId() === 'portal') {
+            return $this->hasRole('Cliente') && $this->clienteAcceso()->exists();
+        }
+
         $rolesConAcceso = array_merge(
             [config('filament-shield.super_admin.name', 'super_admin')],
             config('admin.panel_roles', []),
@@ -71,5 +76,23 @@ class User extends Authenticatable implements Auditable, FilamentUser
     public function pagos()
     {
         return $this->hasMany(Pago::class, 'usuario_id');
+    }
+
+    /**
+     * El acceso ACTIVO de este usuario al portal, si tiene uno. Un usuario
+     * de staff normalmente no tiene ninguno.
+     */
+    public function clienteAcceso()
+    {
+        return $this->hasOne(ClienteAcceso::class)->whereNull('revocado_en');
+    }
+
+    /**
+     * Atajo para llegar directo al Cliente que este usuario puede consultar
+     * en el portal, sin pasar por clienteAcceso() cada vez.
+     */
+    public function cliente(): ?Cliente
+    {
+        return $this->clienteAcceso?->cliente;
     }
 }
