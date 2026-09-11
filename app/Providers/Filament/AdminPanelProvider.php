@@ -40,6 +40,7 @@ class AdminPanelProvider extends PanelProvider
                 GrupoNavegacion::Padron->getLabel(),
                 GrupoNavegacion::Operacion->getLabel(),
                 GrupoNavegacion::Catalogos->getLabel(),
+                GrupoNavegacion::Administracion->getLabel(),
             ])
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\Filament\Admin\Pages')
             ->pages([
