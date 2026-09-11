@@ -18,10 +18,14 @@ class Cliente extends Model implements Auditable
     use \OwenIt\Auditing\Auditable;
     use SoftDeletes;
 
+    /** Serie de la que sale el código sugerido al dar de alta. */
+    public const CLAVE_CORRELATIVO = 'cliente';
+
     protected $table = 'clientes';
 
     protected $fillable = [
         'codigo',
+        'token_alta',
         'nombre',
         'nit',
         'dpi',

@@ -3,12 +3,15 @@
 namespace App\Providers;
 
 use App\Models\Boleta;
+use App\Models\Cliente;
+use App\Models\Contador;
 use App\Models\Documento;
 use App\Models\Lectura;
 use App\Models\Pago;
 use App\Models\SerieDocumento;
 use App\Models\Tarifa;
 use App\Observers\BoletaObserver;
+use App\Observers\CodigoCorrelativoObserver;
 use App\Observers\DocumentoObserver;
 use App\Observers\LecturaObserver;
 use App\Observers\PagoObserver;
@@ -37,5 +40,8 @@ class AppServiceProvider extends ServiceProvider
         Tarifa::observe(TarifaObserver::class);
         SerieDocumento::observe(SerieDocumentoObserver::class);
         Documento::observe(DocumentoObserver::class);
+
+        Cliente::observe(CodigoCorrelativoObserver::class);
+        Contador::observe(CodigoCorrelativoObserver::class);
     }
 }
