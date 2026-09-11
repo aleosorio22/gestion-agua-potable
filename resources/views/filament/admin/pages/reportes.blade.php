@@ -13,8 +13,8 @@
                     type="button"
                     @click="abierto = ! abierto"
                     class="w-full flex items-center gap-4 rounded-xl border-2 border-yellow-400
-                           bg-black p-4 text-left shadow-sm
-                           hover:bg-gray-900 hover:shadow-md transition
+                           bg-gray-800 p-4 text-left shadow-sm
+                           hover:bg-gray-700 hover:shadow-md transition
                            focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 >
 

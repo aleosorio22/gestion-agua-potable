@@ -6,6 +6,7 @@ use App\Filament\Admin\Enums\GrupoNavegacion;
 use App\Models\Cliente;
 use App\Models\Contador;
 use App\Models\Boleta;
+use App\Models\Periodo;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Pages\Page;
@@ -45,20 +46,19 @@ class Reportes extends Page
             ],
             'contadores' => [
                 'titulo' => 'Contadores',
-                'descripcion' => 'Listado de contadores instalados',
+                'descripcion' => 'Medidores instalados',
                 'icono' => 'heroicon-o-cpu-chip',
             ],
             'boletas' => [
                 'titulo' => 'Boletas',
-                'descripcion' => 'Facturación por período',
+                'descripcion' => 'Facturación del período vigente',
                 'icono' => 'heroicon-o-receipt-percent',
             ],
             'mora' => [
                 'titulo' => 'Cuentas por cobrar',
-                'descripcion' => 'Boletas pendientes o vencidas',
+                'descripcion' => 'Boletas pendientes y vencidas',
                 'icono' => 'heroicon-o-exclamation-triangle',
             ],
-            // agregar más categorías aquí conforme se construyan
         ];
     }
 
@@ -124,25 +124,42 @@ class Reportes extends Page
     private function consultaContadores(): array
     {
         return [
-            'contadores' => Contador::with(['cliente', 'predio'])->get(),
+            'contadores' => Contador::with(['cliente', 'predio', 'paja'])
+                ->orderBy('codigo')
+                ->get(),
         ];
     }
 
     private function consultaBoletas(): array
     {
+        $periodo = Periodo::vigente();
+
         return [
-            'boletas' => Boleta::with('cliente')
-                ->whereBetween('created_at', [now()->startOfMonth(), now()])
-                ->get(),
+            'periodo' => $periodo,
+            'boletas' => $periodo
+                ? $periodo->boletas()
+                    ->vigentes()
+                    ->with(['cliente', 'periodo'])
+                    ->orderBy('numero')
+                    ->get()
+                : collect(),
         ];
     }
 
     private function consultaMora(): array
     {
+        $boletas = Boleta::vencidas()
+            ->with(['cliente', 'periodo'])
+            ->orderBy('fecha_vencimiento')
+            ->get()
+            ->map(function (Boleta $boleta) {
+                $boleta->dias_atraso = $boleta->fecha_vencimiento->diffInDays(now());
+
+                return $boleta;
+            });
+
         return [
-            'boletas' => Boleta::with('cliente')
-                ->whereIn('estado', ['pendiente', 'vencida'])
-                ->get(),
+            'boletas' => $boletas,
         ];
     }
 }
