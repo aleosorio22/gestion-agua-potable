@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Configuracion;
 use App\Models\Pago;
+use App\Support\AjustesDeImpresion;
 use Illuminate\Contracts\View\View;
 
 /**
@@ -27,13 +27,7 @@ class ReciboPagoController extends Controller
             'pago' => $pago,
             'boleta' => $pago->boleta,
             'saldo' => $pago->boleta->saldo,
-            'entidad' => [
-                'nombre' => Configuracion::obtener('entidad.nombre', 'Oficina de Agua Potable'),
-                'nit' => Configuracion::obtener('entidad.nit'),
-                'telefono' => Configuracion::obtener('entidad.telefono'),
-                'municipio' => Configuracion::obtener('ubicacion.municipio'),
-                'departamento' => Configuracion::obtener('ubicacion.departamento'),
-            ],
+            'ajustes' => app(AjustesDeImpresion::class),
         ]);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Lecturas\Pages;
 
 use App\Filament\Admin\Resources\Lecturas\LecturaResource;
+use App\Models\Lectura;
 use App\Models\Periodo;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -30,8 +31,21 @@ class ListLecturas extends ListRecords
      */
     public function getSubheading(): ?string
     {
-        return Periodo::abiertos()->exists()
-            ? null
-            : 'No hay ningún período abierto. Abra el ciclo del mes para poder registrar lecturas.';
+        if (! Periodo::abiertos()->exists()) {
+            return 'No hay ningún período abierto. Abra el ciclo del mes para poder registrar lecturas.';
+        }
+
+        $periodo = Periodo::vigente();
+
+        $sinFacturar = $periodo
+            ? Lectura::where('periodo_id', $periodo->id)->doesntHave('boleta')->count()
+            : 0;
+
+        // El olvido tiene que verse: una lectura sin boleta es trabajo de campo
+        // hecho que la oficina no cobró.
+        return $sinFacturar > 0
+            ? "{$sinFacturar} ".($sinFacturar === 1 ? 'lectura de este período todavía no tiene boleta.' : 'lecturas de este período todavía no tienen boleta.')
+                .' Selecciónelas y use «Emitir boletas» para facturarlas juntas.'
+            : null;
     }
 }
