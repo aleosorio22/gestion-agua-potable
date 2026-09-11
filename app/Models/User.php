@@ -83,12 +83,15 @@ class User extends Authenticatable implements Auditable, FilamentUser
             return $this->hasRole('Cliente') && $this->clienteAcceso()->exists();
         }
 
-        $rolesConAcceso = array_merge(
-            [config('filament-shield.super_admin.name', 'super_admin')],
-            config('admin.panel_roles', []),
-        );
+        $rolesConAcceso = match ($panel->getId()) {
+            'lector' => config('lector.panel_roles', []),
+            default => config('admin.panel_roles', []),
+        };
 
-        return $this->hasAnyRole($rolesConAcceso);
+        return $this->hasAnyRole([
+            config('filament-shield.super_admin.name', 'super_admin'),
+            ...$rolesConAcceso,
+        ]);
     }
 
     /**
