@@ -11,3 +11,4 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Policies/** | .ai/rules/policies.md |
 | app/Filament/Portal/** | .ai/rules/portal.md |
 | app/Filament/Admin/Resources/** | .ai/rules/resources.md |
+| tests/** | .ai/rules/tests.md |
