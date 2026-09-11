@@ -53,6 +53,29 @@ class LecturaResource extends Resource
     }
 
     /**
+     * Las que se midieron pero todavía no se cobran.
+     *
+     * Sin esto, una lectura puede quedarse sin boleta para siempre y nadie se
+     * entera: el trabajo de campo está hecho pero la oficina no cobró.
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        $sinFacturar = Lectura::query()->doesntHave('boleta')->count();
+
+        return $sinFacturar > 0 ? (string) $sinFacturar : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Lecturas sin boleta emitida';
+    }
+
+    /**
      * Sin período abierto no hay dónde registrar: el alta se apaga en vez de
      * dejar al lector llenar el formulario para chocar al guardar.
      */

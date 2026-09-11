@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\Periodos\PeriodoResource;
 use App\Models\Contador;
 use App\Models\Lectura;
 use App\Models\Periodo;
+use App\Services\EmisorAutomatico;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
@@ -281,6 +282,8 @@ class RutaLectura extends Page implements HasTable
                     ->title("Contador {$record->codigo} leído")
                     ->body("Consumo del período: {$lectura->refresh()->consumo_m3} m³.")
                     ->send();
+
+                app(EmisorAutomatico::class)->emitirSiCorresponde($lectura);
             });
     }
 

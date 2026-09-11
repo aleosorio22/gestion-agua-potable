@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Boleta;
-use App\Models\Configuracion;
 use App\Models\Contador;
+use App\Support\AjustesDeImpresion;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 
@@ -43,14 +43,7 @@ class ReciboContadorController extends Controller
             'conceptos' => $this->conceptos($boletas),
             'total' => $boletas->sum(fn (Boleta $boleta): float => $boleta->saldo),
             'vence' => $boletas->min('fecha_vencimiento'),
-            'entidad' => [
-                'nombre' => Configuracion::obtener('entidad.nombre', 'Oficina de Agua Potable'),
-                'nit' => Configuracion::obtener('entidad.nit'),
-                'direccion' => Configuracion::obtener('entidad.direccion'),
-                'telefono' => Configuracion::obtener('entidad.telefono'),
-                'municipio' => Configuracion::obtener('ubicacion.municipio'),
-                'departamento' => Configuracion::obtener('ubicacion.departamento'),
-            ],
+            'ajustes' => app(AjustesDeImpresion::class),
         ]);
     }
 
