@@ -5,10 +5,12 @@ namespace App\Filament\Admin\Resources\Clientes\Pages;
 use App\Filament\Admin\Resources\Clientes\ClienteResource;
 use App\Filament\Admin\Resources\Clientes\Schemas\ClienteForm;
 use App\Filament\Admin\Resources\Contadores\Schemas\ContadorForm;
+use App\Filament\Admin\Resources\Documentos\Schemas\DocumentoForm;
 use App\Filament\Admin\Resources\Predios\Schemas\PredioForm;
 use App\Models\Cliente;
 use App\Models\Contador;
 use App\Models\Predio;
+use App\Services\ArchivadorDeExpediente;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -58,6 +60,9 @@ class CreateCliente extends CreateRecord
                         ->default(fn (): string => (string) Str::uuid()),
 
                     ...ClienteForm::campos(),
+
+                    Group::make(DocumentoForm::camposAdjuntos(respaldaPredio: false))
+                        ->statePath('documento_persona'),
                 ]),
 
             Step::make('Predio')
@@ -101,6 +106,12 @@ class CreateCliente extends CreateRecord
                     Group::make(PredioForm::campos())
                         ->statePath('predio')
                         ->visible(fn (Get $get): bool => $get('modo_predio') === 'nuevo'),
+
+                    // Sin propiedad no hay nada que respaldar, así que el
+                    // adjunto desaparece junto con el resto del paso.
+                    Group::make(DocumentoForm::camposAdjuntos(respaldaPredio: true))
+                        ->statePath('documento_predio')
+                        ->visible(fn (Get $get): bool => $get('modo_predio') !== 'ninguno'),
                 ]),
 
             Step::make('Contador')
@@ -164,12 +175,32 @@ class CreateCliente extends CreateRecord
         $datosPredio = $data['predio'] ?? [];
         $datosContador = $data['contador'] ?? [];
         $predioExistente = $data['predio_existente_id'] ?? null;
+        $documentoPersona = $data['documento_persona'] ?? null;
+        $documentoPredio = $data['documento_predio'] ?? null;
 
         $datosCliente = collect($data)
-            ->except(['modo_predio', 'predio', 'contador', 'predio_existente_id'])
+            ->except([
+                'modo_predio',
+                'predio',
+                'contador',
+                'predio_existente_id',
+                'documento_persona',
+                'documento_predio',
+            ])
             ->all();
 
-        return DB::transaction(function () use ($modo, $datosCliente, $datosPredio, $datosContador, $predioExistente): Cliente {
+        $archivador = app(ArchivadorDeExpediente::class);
+
+        return DB::transaction(function () use (
+            $modo,
+            $datosCliente,
+            $datosPredio,
+            $datosContador,
+            $predioExistente,
+            $documentoPersona,
+            $documentoPredio,
+            $archivador,
+        ): Cliente {
             // Segunda línea, para dos peticiones realmente simultáneas: la de
             // `beforeValidate()` puede haber mirado antes de que la otra
             // insertara. El índice único de `token_alta` es el que cierra el
@@ -181,6 +212,9 @@ class CreateCliente extends CreateRecord
             }
 
             $cliente = Cliente::create($datosCliente);
+
+            // El DPI documenta a la persona: no depende de que haya servicio.
+            $archivador->adjuntar($cliente, $documentoPersona);
 
             if ($modo === 'ninguno') {
                 return $cliente;
@@ -195,6 +229,8 @@ class CreateCliente extends CreateRecord
                 'cliente_id' => $cliente->getKey(),
                 'predio_id' => $predioId,
             ]);
+
+            $archivador->adjuntar($cliente, $documentoPredio, $predioId);
 
             return $cliente;
         });
