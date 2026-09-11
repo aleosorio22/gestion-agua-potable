@@ -5,6 +5,7 @@ use App\Filament\Admin\Pages\Configuracion as PaginaConfiguracion;
 use App\Filament\Admin\Pages\RutaLectura;
 use App\Filament\Admin\Resources\Lecturas\LecturaResource;
 use App\Models\Boleta;
+use App\Models\Cliente;
 use App\Models\Configuracion;
 use App\Models\Contador;
 use App\Models\Lectura;
@@ -20,6 +21,7 @@ use Filament\Facades\Filament;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use OwenIt\Auditing\Models\Audit;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -269,4 +271,34 @@ it('no avisa nada cuando todo el periodo esta facturado', function () {
         ->getSubheading();
 
     expect($aviso)->toBeNull();
+});
+
+it('audita el cambio de un ajuste y deja quien lo hizo', function () {
+    // `configuracion` usa la clave de texto como llave primaria, y
+    // `audits.auditable_id` venía como entero: auditar un ajuste moría con
+    // «Incorrect integer value». Nadie lo había visto porque el seeder corre
+    // con WithoutModelEvents y nunca dispara el observer.
+    Configuracion::guardar('entidad.nit', '1039482-5');
+
+    $auditoria = Audit::query()
+        ->where('auditable_type', Configuracion::class)
+        ->where('auditable_id', 'entidad.nit')
+        ->latest('id')
+        ->first();
+
+    expect($auditoria)->not->toBeNull()
+        ->and($auditoria->event)->toBe('created')
+        ->and($auditoria->new_values['valor'])->toBe('1039482-5')
+        ->and(Configuracion::find('entidad.nit')->actualizado_por)->toBe(auth()->id());
+});
+
+it('conserva la auditoria de los modelos con llave numerica', function () {
+    $cliente = Cliente::factory()->create();
+
+    $auditoria = Audit::query()
+        ->where('auditable_type', Cliente::class)
+        ->where('auditable_id', $cliente->getKey())
+        ->first();
+
+    expect($auditoria)->not->toBeNull();
 });
