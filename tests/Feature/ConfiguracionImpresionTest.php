@@ -2,8 +2,8 @@
 
 use App\Enums\FormatoPapel;
 use App\Filament\Admin\Pages\Configuracion as PaginaConfiguracion;
-use App\Filament\Admin\Pages\RutaLectura;
 use App\Filament\Admin\Resources\Lecturas\LecturaResource;
+use App\Filament\Lector\Pages\RutaDeLectura;
 use App\Models\Boleta;
 use App\Models\Cliente;
 use App\Models\Configuracion;
@@ -235,12 +235,13 @@ it('guarda la lectura aunque su boleta no se pueda emitir', function () {
 });
 
 it('emite la boleta desde la ruta de lectura si esta encendido', function () {
+    Filament::setCurrentPanel('lector');
     Configuracion::guardar('facturacion.emitir_al_registrar', '1');
 
     $contador = servicioListo();
     Periodo::factory()->create();
 
-    Livewire::test(RutaLectura::class)
+    Livewire::test(RutaDeLectura::class)
         ->callTableAction('registrar', $contador, data: [
             'lectura_anterior' => 0,
             'lectura_actual' => 21,

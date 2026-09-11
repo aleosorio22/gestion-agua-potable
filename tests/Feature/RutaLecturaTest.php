@@ -1,6 +1,7 @@
 <?php
 
-use App\Filament\Admin\Pages\RutaLectura;
+use App\Filament\Lector\Pages\RutaDeLectura;
+use App\Models\Boleta;
 use App\Models\Contador;
 use App\Models\Lectura;
 use App\Models\Periodo;
@@ -17,7 +18,7 @@ use Spatie\Permission\Models\Role;
  * registro reducido a teclear una cifra.
  */
 beforeEach(function () {
-    Filament::setCurrentPanel('admin');
+    Filament::setCurrentPanel('lector');
 
     $this->seed(ShieldSeeder::class);
 
@@ -36,7 +37,7 @@ it('lista los contadores que faltan por leer en el periodo', function () {
     $pendiente = Contador::factory()->create();
     $yaLeido = Lectura::factory()->create(['periodo_id' => $this->periodo->id])->contador;
 
-    Livewire::test(RutaLectura::class)
+    Livewire::test(RutaDeLectura::class)
         ->assertSuccessful()
         ->assertCanSeeTableRecords([$pendiente])
         ->assertCanNotSeeTableRecords([$yaLeido]);
@@ -47,7 +48,7 @@ it('deja fuera de la ruta a los contadores inactivos y dañados', function () {
     $inactivo = Contador::factory()->create(['estado' => 'inactivo']);
     $dañado = Contador::factory()->create(['estado' => 'dañado']);
 
-    Livewire::test(RutaLectura::class)
+    Livewire::test(RutaDeLectura::class)
         ->assertCanSeeTableRecords([$activo])
         ->assertCanNotSeeTableRecords([$inactivo, $dañado]);
 });
@@ -64,7 +65,7 @@ it('ordena la ruta por el orden de recorrido del sector', function () {
         ])->id,
     ]);
 
-    Livewire::test(RutaLectura::class)
+    Livewire::test(RutaDeLectura::class)
         ->assertCanSeeTableRecords([$primero, $ultimo], inOrder: true);
 });
 
@@ -72,14 +73,14 @@ it('cuenta el avance del recorrido', function () {
     Contador::factory()->count(3)->create();
     Lectura::factory()->create(['periodo_id' => $this->periodo->id]);
 
-    expect(Livewire::test(RutaLectura::class)->instance()->avance)
+    expect(Livewire::test(RutaDeLectura::class)->instance()->avance)
         ->toBe(['leidos' => 1, 'total' => 4]);
 });
 
 it('registra la lectura desde el modal con el lector y la fecha de hoy', function () {
     $contador = Contador::factory()->create();
 
-    Livewire::test(RutaLectura::class)
+    Livewire::test(RutaDeLectura::class)
         ->callTableAction('registrar', $contador, data: [
             'lectura_anterior' => 0,
             'lectura_actual' => 27.5,
@@ -99,7 +100,7 @@ it('precarga la lectura anterior del contador en el modal', function () {
     // el contador sigue pendiente en el período de la ruta.
     $anterior = Lectura::factory()->create(['lectura_actual' => 33.25]);
 
-    Livewire::test(RutaLectura::class)
+    Livewire::test(RutaDeLectura::class)
         ->mountTableAction('registrar', $anterior->contador)
         ->assertTableActionDataSet(['lectura_anterior' => 33.25]);
 });
@@ -107,7 +108,7 @@ it('precarga la lectura anterior del contador en el modal', function () {
 it('rechaza desde el modal una lectura menor que la anterior', function () {
     $anterior = Lectura::factory()->create(['lectura_actual' => 40]);
 
-    Livewire::test(RutaLectura::class)
+    Livewire::test(RutaDeLectura::class)
         ->callTableAction('registrar', $anterior->contador, data: [
             'lectura_anterior' => 40,
             'lectura_actual' => 12,
@@ -118,7 +119,7 @@ it('rechaza desde el modal una lectura menor que la anterior', function () {
 it('saca de pendientes al contador recien leido y lo pasa a leidos', function () {
     $contador = Contador::factory()->create();
 
-    $pagina = Livewire::test(RutaLectura::class)
+    $pagina = Livewire::test(RutaDeLectura::class)
         ->callTableAction('registrar', $contador, data: [
             'lectura_anterior' => 0,
             'lectura_actual' => 15,
@@ -139,7 +140,7 @@ it('no ofrece registrar cuando hoy queda fuera del periodo', function () {
     ]);
     $contador = Contador::factory()->create();
 
-    $pagina = Livewire::test(RutaLectura::class)->set('periodoId', $viejo->id);
+    $pagina = Livewire::test(RutaDeLectura::class)->set('periodoId', $viejo->id);
 
     expect($pagina->instance()->puedeRegistrar())->toBeFalse()
         ->and($pagina->instance()->aviso)->toContain('está fuera del período 2026-01');
@@ -152,20 +153,58 @@ it('sigue accesible desde el menu aunque no haya periodo abierto', function () {
 
     // Esconderla dejaría al usuario sin botón y sin explicación: la pantalla
     // existe justamente para decirle que falta abrir el ciclo.
-    expect(RutaLectura::shouldRegisterNavigation())->toBeTrue();
+    expect(RutaDeLectura::shouldRegisterNavigation())->toBeTrue();
 });
 
-it('avisa y ofrece abrir el ciclo cuando no hay periodo abierto', function () {
+it('avisa cuando no hay periodo abierto y manda a la oficina', function () {
     Periodo::query()->update(['cerrado_en' => now()]);
 
-    $pagina = Livewire::test(RutaLectura::class)->assertSuccessful();
+    $pagina = Livewire::test(RutaDeLectura::class)->assertSuccessful();
 
-    expect($pagina->instance()->aviso)->toContain('No hay ningún período abierto');
-
-    $pagina->assertActionVisible('abrirPeriodo');
+    // Abrir el ciclo es trabajo de oficina: el lector no entra a /admin, así
+    // que el aviso le dice a quién avisar en vez de ofrecerle un botón muerto.
+    expect($pagina->instance()->aviso)
+        ->toContain('No hay ningún período abierto')
+        ->toContain('Avise a la oficina');
 });
 
-it('no ofrece abrir un ciclo cuando ya hay uno en curso', function () {
-    Livewire::test(RutaLectura::class)
-        ->assertActionHidden('abrirPeriodo');
+it('deja corregir una lectura del periodo sin salir de la ruta', function () {
+    $contador = Contador::factory()->create();
+
+    Livewire::test(RutaDeLectura::class)
+        ->callTableAction('registrar', $contador, data: [
+            'lectura_anterior' => 0,
+            'lectura_actual' => 210,
+        ]);
+
+    // Un dedazo en el celular: 210 en vez de 21. El lector ya no entra a
+    // /admin, así que tiene que poder arreglarlo acá mismo.
+    Livewire::test(RutaDeLectura::class)
+        ->call('cambiarVista', 'leidos')
+        ->callTableAction('corregir', $contador, data: [
+            'lectura_anterior' => 0,
+            'lectura_actual' => 21,
+        ])
+        ->assertHasNoTableActionErrors();
+
+    expect((float) $contador->lecturas()->first()->consumo_m3)->toBe(21.0);
+});
+
+it('explica por que no se puede corregir una lectura ya facturada', function () {
+    $facturada = Boleta::factory()->create()->lectura;
+
+    // Deshabilitado con su motivo, no escondido: el lector tiene que saber
+    // por qué esta casa no se deja corregir.
+    Livewire::test(RutaDeLectura::class)
+        ->set('periodoId', $facturada->periodo_id)
+        ->call('cambiarVista', 'leidos')
+        ->assertTableActionVisible('corregir', $facturada->contador)
+        ->assertTableActionDisabled('corregir', $facturada->contador);
+});
+
+it('no ofrece corregir desde la pestaña de pendientes', function () {
+    $contador = Contador::factory()->create();
+
+    Livewire::test(RutaDeLectura::class)
+        ->assertTableActionHidden('corregir', $contador);
 });

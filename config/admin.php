@@ -45,15 +45,19 @@ return [
     | Roles con acceso al panel administrativo
     |--------------------------------------------------------------------------
     |
-    | Quiénes pueden entrar a /admin. El rol Cliente queda fuera a propósito:
-    | su acceso es el portal de autoservicio (/portal), no el panel interno.
+    | Quiénes pueden entrar a /admin. Dos roles quedan fuera a propósito: el
+    | Cliente, cuyo acceso es el portal de autoservicio (/portal), y el Lector,
+    | cuya herramienta es la ruta de lectura (/lector). Dejarles además el panel
+    | de oficina solo les da lugares donde perderse.
+    |
+    | Siguen siendo usuarios que se crean y configuran desde /admin: lo que
+    | cambia es a dónde entran, no quién los administra.
     |
     */
 
     'panel_roles' => [
         'Administrador',
         'Secretaria',
-        'Lector',
     ],
 
     /*

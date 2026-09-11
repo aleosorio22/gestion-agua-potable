@@ -1,13 +1,9 @@
 <x-filament-panels::page>
     @if ($this->aviso)
         <x-filament::section>
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                    {{ $this->aviso }}
-                </p>
-
-                {{ $this->abrirPeriodoAction }}
-            </div>
+            <p class="text-base text-gray-700">
+                {{ $this->aviso }}
+            </p>
         </x-filament::section>
     @endif
 
@@ -15,12 +11,12 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             {{-- Avance del recorrido: cuánto falta para cerrar la ruta del mes. --}}
             <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
+                <p class="text-sm text-gray-500">
                     Período {{ $this->getPeriodo()->etiqueta }}
                 </p>
-                <p class="text-2xl font-bold tracking-tight text-gray-950 dark:text-white">
+                <p class="text-3xl font-bold tracking-tight text-gray-950">
                     {{ $this->avance['leidos'] }} de {{ $this->avance['total'] }}
-                    <span class="text-base font-normal text-gray-500 dark:text-gray-400">
+                    <span class="text-base font-normal text-gray-500">
                         contadores leídos
                     </span>
                 </p>
@@ -30,14 +26,14 @@
                 <div>
                     <label
                         for="periodo-de-la-ruta"
-                        class="block text-sm font-medium text-gray-950 dark:text-white"
+                        class="block text-sm font-medium text-gray-950"
                     >
                         Período
                     </label>
                     <select
                         id="periodo-de-la-ruta"
                         wire:model.live="periodoId"
-                        class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white"
+                        class="mt-1 block w-full rounded-lg border-gray-300 py-2.5 text-base shadow-sm"
                     >
                         @foreach ($this->periodosDisponibles as $id => $etiqueta)
                             <option value="{{ $id }}">{{ $etiqueta }}</option>
