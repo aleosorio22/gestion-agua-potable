@@ -127,6 +127,72 @@ class DocumentoForm
         ];
     }
 
+    /**
+     * El adjunto opcional que se ofrece donde el vecino está presente con sus
+     * papeles: el alta guiada y la conexión de un servicio.
+     *
+     * Es el único momento en que la oficina tiene la escritura enfrente. Si no
+     * se captura ahí, nadie vuelve a pedirla y el expediente queda vacío.
+     *
+     * Va opcional a propósito: obligarlo suena prolijo, pero el vecino que
+     * llega sin la escritura existe, y un sistema que no lo deja avanzar
+     * termina empujando a la secretaria a registrar por fuera.
+     *
+     * @param  bool  $respaldaPredio  Qué tipos ofrecer: los de la propiedad o los de la persona.
+     * @return array<int, Component>
+     */
+    public static function camposAdjuntos(bool $respaldaPredio): array
+    {
+        $titulo = $respaldaPredio
+            ? 'Documento que respalda la propiedad'
+            : 'Documento de identidad';
+
+        $ayuda = $respaldaPredio
+            ? 'Escritura, recibo de energía eléctrica o contrato. Puede cargarse después desde el expediente.'
+            : 'DPI o constancia de NIT. Puede cargarse después desde el expediente.';
+
+        return [
+            Section::make($titulo)
+                ->description($ayuda)
+                ->columns(2)
+                ->collapsible()
+                ->schema([
+                    Select::make('tipo_documento_id')
+                        ->label('Tipo de documento')
+                        ->native(false)
+                        ->options(fn (): array => TipoDocumento::query()
+                            ->where('activo', true)
+                            ->where('respalda_predio', $respaldaPredio)
+                            ->orderBy('nombre')
+                            ->pluck('nombre', 'id')
+                            ->all())
+                        // Ninguno de los dos es obligatorio por sí solo, pero
+                        // un archivo sin tipo no se puede archivar y un tipo
+                        // sin archivo no documenta nada.
+                        ->required(fn (Get $get): bool => filled($get('ruta')))
+                        ->validationMessages([
+                            'required' => 'Indique de qué documento se trata.',
+                        ]),
+
+                    FileUpload::make('ruta')
+                        ->label('Archivo')
+                        ->disk('local')
+                        ->directory('documentos')
+                        ->visibility('private')
+                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/heic', 'application/pdf'])
+                        ->maxSize(10240)
+                        ->storeFileNamesIn('nombre_original')
+                        ->openable()
+                        ->required(fn (Get $get): bool => filled($get('tipo_documento_id')))
+                        ->validationMessages([
+                            'required' => 'Eligió un tipo de documento: adjunte el archivo o quite el tipo.',
+                            'max' => 'El archivo no puede pasar de 10 MB. Si es una foto, bájele la resolución.',
+                        ])
+                        ->helperText('Foto o PDF, hasta 10 MB.'),
+                ]),
+        ];
+    }
+
     private static function respaldaPredio(mixed $tipoId): bool
     {
         return $tipoId

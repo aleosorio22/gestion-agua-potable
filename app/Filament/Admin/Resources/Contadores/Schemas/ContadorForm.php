@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\Contadores\Schemas;
 
+use App\Filament\Admin\Resources\Documentos\Schemas\DocumentoForm;
 use App\Filament\Admin\Resources\Predios\Schemas\PredioForm;
 use App\Models\Cliente;
 use App\Models\Contador;
@@ -11,6 +12,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -50,6 +52,13 @@ class ContadorForm
                     ->schema([
                         static::campoEstado(),
                     ]),
+
+                // Solo al conectar: es el momento en que el vecino está en la
+                // ventanilla con la escritura. Al editar un contador ya
+                // existente el expediente se maneja desde la ficha del cliente.
+                Group::make(DocumentoForm::camposAdjuntos(respaldaPredio: true))
+                    ->statePath('documento')
+                    ->visible(fn (string $operation): bool => $operation === 'create'),
             ]);
     }
 

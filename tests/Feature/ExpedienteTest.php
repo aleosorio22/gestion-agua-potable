@@ -2,10 +2,13 @@
 
 use App\Filament\Admin\Resources\Clientes\ClienteResource;
 use App\Filament\Admin\Resources\Clientes\RelationManagers\DocumentosRelationManager;
+use App\Filament\Admin\Resources\Contadores\ContadorResource;
 use App\Filament\Admin\Resources\Documentos\DocumentoResource;
+use App\Filament\Admin\Resources\Predios\PredioResource;
 use App\Models\Cliente;
 use App\Models\Contador;
 use App\Models\Documento;
+use App\Models\Paja;
 use App\Models\Predio;
 use App\Models\TipoDocumento;
 use App\Models\User;
@@ -263,4 +266,124 @@ it('muestra en la ficha solo los documentos de ese cliente', function () {
     ])
         ->assertCanSeeTableRecords([$suyo])
         ->assertCanNotSeeTableRecords([$ajeno]);
+});
+
+it('adjunta el documento de identidad desde el alta guiada', function () {
+    Livewire::test(ClienteResource::getPages()['create']->getPage())
+        ->fillForm([
+            'codigo' => 'CLI-9001',
+            'nombre' => 'María Xicay',
+            'estado' => 'activo',
+            'modo_predio' => 'ninguno',
+            'documento_persona' => [
+                'tipo_documento_id' => $this->dpi->id,
+                'ruta' => archivoDePrueba('dpi.pdf'),
+            ],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $documento = Documento::first();
+
+    expect($documento->cliente->codigo)->toBe('CLI-9001')
+        ->and($documento->predio_id)->toBeNull()
+        ->and($documento->tipo_documento_id)->toBe($this->dpi->id)
+        ->and(Storage::disk('local')->exists($documento->ruta))->toBeTrue();
+});
+
+it('adjunta la escritura al predio que se crea en el alta guiada', function () {
+    $paja = Paja::factory()->create();
+
+    Livewire::test(ClienteResource::getPages()['create']->getPage())
+        ->fillForm([
+            'codigo' => 'CLI-9002',
+            'nombre' => 'Josefa Tzoc',
+            'estado' => 'activo',
+            'modo_predio' => 'nuevo',
+            'predio' => ['aldea' => 'El Porvenir', 'numero_casa' => '1-31'],
+            'contador' => ['codigo' => 'CTR-9002', 'paja_id' => $paja->id, 'estado' => 'activo'],
+            'documento_predio' => [
+                'tipo_documento_id' => $this->escritura->id,
+                'ruta' => archivoDePrueba(),
+            ],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $documento = Documento::first();
+
+    expect($documento->predio_id)->not->toBeNull()
+        ->and($documento->predio->aldea)->toBe('El Porvenir')
+        ->and($documento->cliente->codigo)->toBe('CLI-9002');
+});
+
+it('deja dar de alta sin adjuntar nada', function () {
+    Livewire::test(ClienteResource::getPages()['create']->getPage())
+        ->fillForm([
+            'codigo' => 'CLI-9003',
+            'nombre' => 'Sin papeles todavía',
+            'estado' => 'activo',
+            'modo_predio' => 'ninguno',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Cliente::where('codigo', 'CLI-9003')->exists())->toBeTrue()
+        ->and(Documento::count())->toBe(0);
+});
+
+it('pide el tipo si se adjunta un archivo sin decir que es', function () {
+    Livewire::test(ClienteResource::getPages()['create']->getPage())
+        ->fillForm([
+            'codigo' => 'CLI-9004',
+            'nombre' => 'Con archivo suelto',
+            'estado' => 'activo',
+            'modo_predio' => 'ninguno',
+            'documento_persona' => ['ruta' => archivoDePrueba('dpi.pdf')],
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['documento_persona.tipo_documento_id']);
+
+    expect(Cliente::where('codigo', 'CLI-9004')->exists())->toBeFalse();
+});
+
+it('adjunta el respaldo al conectar un servicio desde contadores', function () {
+    $cliente = Cliente::factory()->create();
+    $predio = Predio::factory()->create();
+    $paja = Paja::factory()->create();
+
+    Livewire::test(ContadorResource::getPages()['create']->getPage())
+        ->fillForm([
+            'codigo' => 'CTR-9100',
+            'cliente_id' => $cliente->id,
+            'predio_id' => $predio->id,
+            'paja_id' => $paja->id,
+            'estado' => 'activo',
+            'documento' => [
+                'tipo_documento_id' => $this->escritura->id,
+                'ruta' => archivoDePrueba(),
+            ],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $documento = Documento::first();
+
+    expect($documento->cliente_id)->toBe($cliente->id)
+        ->and($documento->predio_id)->toBe($predio->id);
+});
+
+it('marca los predios que quedaron sin respaldo documental', function () {
+    $conRespaldo = Contador::factory()->create()->predio;
+    $sinRespaldo = Contador::factory()->create()->predio;
+
+    Documento::factory()->create([
+        'cliente_id' => $conRespaldo->contadores()->first()->cliente_id,
+        'predio_id' => $conRespaldo->id,
+    ]);
+
+    Livewire::test(PredioResource::getPages()['index']->getPage())
+        ->filterTable('respaldo_documental', false)
+        ->assertCanSeeTableRecords([$sinRespaldo])
+        ->assertCanNotSeeTableRecords([$conRespaldo]);
 });
