@@ -14,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class UsuarioResource extends Resource
@@ -53,9 +54,21 @@ class UsuarioResource extends Resource
         ];
     }
 
+    /**
+     * Solo el personal de la oficina.
+     *
+     * Las cuentas del portal son de vecinos y se administran desde la ficha de
+     * su cliente: listarlas acá invitaría a asignarles un rol de oficina por
+     * descuido, que es exactamente lo que la separación de paneles evita.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereDoesntHave('clienteAcceso');
+    }
+
     public static function getNavigationBadge(): ?string
     {
-        return (string) User::activos()->count();
+        return (string) static::getEloquentQuery()->where('activo', true)->count();
     }
 
     public static function getNavigationBadgeTooltip(): ?string
