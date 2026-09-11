@@ -7,6 +7,8 @@ use App\Models\Cliente;
 use App\Models\Contador;
 use App\Models\Boleta;
 use App\Models\Periodo;
+use App\Models\Lectura;
+use App\Models\Predio;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Pages\Page;
@@ -58,6 +60,16 @@ class Reportes extends Page
                 'titulo' => 'Cuentas por cobrar',
                 'descripcion' => 'Boletas pendientes y vencidas',
                 'icono' => 'heroicon-o-exclamation-triangle',
+            ],
+            'lecturas' => [
+                'titulo' => 'Lecturas',
+                'descripcion' => 'Consumo registrado en el período vigente',
+                'icono' => 'heroicon-o-clipboard-document-list',
+            ],
+            'predios' => [
+                'titulo' => 'Predios',
+                'descripcion' => 'Propiedades por sector',
+                'icono' => 'heroicon-o-map',
             ],
         ];
     }
@@ -160,6 +172,40 @@ class Reportes extends Page
 
         return [
             'boletas' => $boletas,
+        ];
+    }
+
+    private function consultaLecturas(): array
+    {
+        $periodo = Periodo::vigente();
+
+        $lecturas = $periodo
+            ? Lectura::where('periodo_id', $periodo->id)
+                ->with(['contador.predio.sector', 'contador.cliente', 'usuario'])
+                ->get()
+                ->sortBy(fn (Lectura $lectura) => $lectura->contador?->predio?->sector?->orden ?? 0)
+                ->groupBy(fn (Lectura $lectura) => $lectura->contador?->predio?->sector?->nombre ?? 'Sin sector')
+            : collect();
+
+        return [
+            'periodo' => $periodo,
+            'lecturasPorSector' => $lecturas,
+        ];
+    }
+
+    private function consultaPredios(): array
+    {
+        return [
+            'predios' => Predio::with('sector')
+                ->withCount(['contadores'])
+                ->get()
+                ->map(function (Predio $predio) {
+                    $predio->total_clientes = $predio->clientes()->count();
+
+                    return $predio;
+                })
+                ->sortBy(fn (Predio $predio) => $predio->sector?->orden ?? 0)
+                ->groupBy(fn (Predio $predio) => $predio->sector?->nombre ?? 'Sin sector'),
         ];
     }
 }
