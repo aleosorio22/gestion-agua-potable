@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\ReciboContadorController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,3 +22,11 @@ Route::get('/dashboard', function () {
 Route::get('/recibos/contador/{contador}', ReciboContadorController::class)
     ->middleware(['auth'])
     ->name('recibos.contador');
+
+/**
+ * Descarga de un documento del expediente. No es una URL pública: el archivo
+ * está en disco privado y esta ruta lo entrega solo a quien la policy autoriza.
+ */
+Route::get('/documentos/{documento}', DocumentoController::class)
+    ->middleware(['auth'])
+    ->name('documentos.descargar');
