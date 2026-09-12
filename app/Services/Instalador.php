@@ -40,7 +40,11 @@ class Instalador
         'curl' => 'Requerida por Laravel',
     ];
 
-    private const PHP_MINIMO = '8.2.0';
+    /**
+     * La misma que exige `composer.json`. Si el instalador aceptara menos,
+     * diría «cumple» en una máquina donde después falla `composer install`.
+     */
+    private const PHP_MINIMO = '8.3.0';
 
     public function estaInstalado(): bool
     {
