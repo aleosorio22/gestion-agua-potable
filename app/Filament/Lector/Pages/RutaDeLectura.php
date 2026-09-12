@@ -138,9 +138,16 @@ class RutaDeLectura extends Page implements HasTable
             return ['leidos' => 0, 'total' => 0];
         }
 
+        $suyos = Contador::query()->activos()->deLaRutaDe(auth()->user());
+
         return [
-            'leidos' => Lectura::where('periodo_id', $periodo->id)->count(),
-            'total' => Contador::activos()->count(),
+            // Su recorrido, no el del padrón entero: a un lector con la mitad
+            // de los sectores le diría que va por la mitad para siempre.
+            'leidos' => (clone $suyos)->whereHas(
+                'lecturas',
+                fn (Builder $q): Builder => $q->where('periodo_id', $periodo->id)
+            )->count(),
+            'total' => $suyos->count(),
         ];
     }
 
@@ -218,6 +225,9 @@ class RutaDeLectura extends Page implements HasTable
         $periodo = $this->getPeriodo();
 
         $consulta = Contador::query()
+            // Cada lector camina lo suyo. Sin sectores asignados ve todo, que
+            // es el caso de la oficina con un solo lector.
+            ->deLaRutaDe(auth()->user())
             ->with(['cliente', 'predio.sector', 'paja'])
             ->leftJoin('predios', 'predios.id', '=', 'contadores.predio_id')
             ->leftJoin('sectores', 'sectores.id', '=', 'predios.sector_id')
