@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -115,6 +116,25 @@ class User extends Authenticatable implements Auditable, FilamentUser
     public function scopeActivos(Builder $query): Builder
     {
         return $query->where('activo', true);
+    }
+
+    /**
+     * Los sectores que este lector tiene asignados para recorrer.
+     *
+     * Sin ninguno ve todo el padrón: es el caso de la oficina de un solo
+     * lector, que no tiene nada que repartir.
+     */
+    public function sectores(): BelongsToMany
+    {
+        return $this->belongsToMany(Sector::class, 'lector_sectores')->withTimestamps();
+    }
+
+    /**
+     * Si su ruta está acotada a ciertos sectores.
+     */
+    public function tieneRutaAsignada(): bool
+    {
+        return $this->sectores()->exists();
     }
 
     public function lecturas()
