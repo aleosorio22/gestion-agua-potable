@@ -4,36 +4,39 @@ namespace App\Exports;
 
 use App\Models\Predio;
 use Illuminate\Support\Enumerable;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
 
-class PrediosExport implements FromCollection, WithHeadings, WithMapping
+class PrediosExport extends ReporteExport
 {
     public function collection(): Enumerable
     {
-        return Predio::with('sector')
-            ->withCount('contadores')
+        return Predio::query()
+            ->with('sector')
+            ->withCount(['contadores', 'documentos'])
             ->get()
-            ->map(function (Predio $predio) {
-                $predio->total_clientes = $predio->clientes()->count();
-
-                return $predio;
-            });
+            ->sortBy(fn (Predio $p): int => $p->sector?->orden ?? 999)
+            ->values();
     }
 
     public function headings(): array
     {
-        return ['Sector', 'Dirección', 'Contadores', 'Clientes'];
+        return ['Sector', 'Dirección', 'Referencia', 'Contadores', 'Documentos', 'Respaldo'];
     }
 
+    /** @param Predio $predio */
     public function map($predio): array
     {
         return [
-            $predio->sector?->nombre,
+            $predio->sector?->nombre ?? 'Sin sector',
             $predio->direccion_completa,
+            $predio->referencia,
             $predio->contadores_count,
-            $predio->total_clientes,
+            $predio->documentos_count,
+            $predio->documentos_count > 0 ? 'Sí' : ($predio->contadores_count > 0 ? 'FALTA' : '—'),
         ];
+    }
+
+    protected function columnasDeTexto(): array
+    {
+        return [];
     }
 }

@@ -2,58 +2,50 @@
 
 namespace App\Exports;
 
-use App\Models\Periodo;
+use App\Models\Boleta;
 use Illuminate\Support\Enumerable;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
-use PhpOffice\PhpSpreadsheet\Cell\Cell;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
-use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 
-class BoletasExport extends DefaultValueBinder implements FromCollection, WithHeadings, WithMapping, WithCustomValueBinder
+class BoletasExport extends ReporteExport
 {
-    private const COLUMNAS_TEXTO = [0]; // numero
-
     public function collection(): Enumerable
     {
-        $periodo = Periodo::vigente();
+        $periodo = $this->periodo();
 
-        return $periodo
-            ? $periodo->boletas()->vigentes()->with('cliente')->orderBy('numero')->get()
-            : collect();
+        if ($periodo === null) {
+            return collect();
+        }
+
+        return Boleta::query()
+            ->where('periodo_id', $periodo->id)
+            ->vigentes()
+            ->with(['cliente', 'periodo'])
+            ->orderBy('numero')
+            ->get();
     }
 
     public function headings(): array
     {
-        return ['No.', 'Cliente', 'Consumo m³', 'Monto', 'Emisión', 'Vencimiento', 'Estado'];
+        return ['Folio', 'Cliente', 'Período', 'Consumo m³', 'Cuota', 'Exceso', 'Total', 'Saldo', 'Estado'];
     }
 
+    /** @param Boleta $boleta */
     public function map($boleta): array
     {
         return [
-            $boleta->numero,
+            $boleta->folio,
             $boleta->cliente?->nombre,
-            $boleta->consumo_m3,
-            $boleta->monto,
-            $boleta->fecha_emision?->format('d/m/Y'),
-            $boleta->fecha_vencimiento?->format('d/m/Y'),
-            $boleta->estado,
+            $boleta->periodo?->etiqueta,
+            (float) $boleta->consumo_m3,
+            (float) $boleta->monto_base,
+            (float) $boleta->monto_excedente,
+            (float) $boleta->monto,
+            $boleta->saldo,
+            ucfirst($boleta->estado),
         ];
     }
 
-    public function bindValue(Cell $cell, $value): bool
+    protected function columnasDeTexto(): array
     {
-        $columna = Coordinate::columnIndexFromString($cell->getColumn()) - 1;
-
-        if (in_array($columna, self::COLUMNAS_TEXTO, true)) {
-            $cell->setValueExplicit((string) $value, DataType::TYPE_STRING);
-
-            return true;
-        }
-
-        return parent::bindValue($cell, $value);
+        return [0, 2];
     }
 }

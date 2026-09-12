@@ -2,62 +2,44 @@
 
 namespace App\Exports;
 
-use App\Models\Periodo;
 use App\Models\Lectura;
 use Illuminate\Support\Enumerable;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
-use PhpOffice\PhpSpreadsheet\Cell\Cell;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
-use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 
-class LecturasExport extends DefaultValueBinder implements FromCollection, WithHeadings, WithMapping, WithCustomValueBinder
+class LecturasExport extends ReporteExport
 {
-    private const COLUMNAS_TEXTO = [1]; // contador codigo
-
     public function collection(): Enumerable
     {
-        $periodo = Periodo::vigente();
+        $periodo = $this->periodo();
 
-        return $periodo
-            ? Lectura::where('periodo_id', $periodo->id)
-                ->with(['contador.predio.sector', 'contador.cliente', 'usuario'])
-                ->get()
-            : collect();
+        if ($periodo === null) {
+            return collect();
+        }
+
+        return Lectura::query()
+            ->where('periodo_id', $periodo->id)
+            ->with(['contador.predio.sector', 'contador.cliente', 'usuario'])
+            ->get()
+            ->sortBy(fn (Lectura $l): int => $l->contador?->predio?->sector?->orden ?? 999)
+            ->values();
     }
 
     public function headings(): array
     {
-        return ['Sector', 'Contador', 'Cliente', 'Lect. anterior', 'Lect. actual', 'Consumo m³', 'Fecha', 'Lector'];
+        return ['Contador', 'Titular', 'Sector', 'Visita', 'Anterior', 'Actual', 'Consumo m³', 'Lector'];
     }
 
+    /** @param Lectura $lectura */
     public function map($lectura): array
     {
         return [
-            $lectura->contador?->predio?->sector?->nombre,
             $lectura->contador?->codigo,
             $lectura->contador?->cliente?->nombre,
-            $lectura->lectura_anterior,
-            $lectura->lectura_actual,
-            $lectura->consumo_m3,
+            $lectura->contador?->predio?->sector?->nombre ?? 'Sin sector',
             $lectura->fecha_lectura?->format('d/m/Y'),
+            (float) $lectura->lectura_anterior,
+            (float) $lectura->lectura_actual,
+            (float) $lectura->consumo_m3,
             $lectura->usuario?->name,
         ];
-    }
-
-    public function bindValue(Cell $cell, $value): bool
-    {
-        $columna = Coordinate::columnIndexFromString($cell->getColumn()) - 1;
-
-        if (in_array($columna, self::COLUMNAS_TEXTO, true)) {
-            $cell->setValueExplicit((string) $value, DataType::TYPE_STRING);
-
-            return true;
-        }
-
-        return parent::bindValue($cell, $value);
     }
 }

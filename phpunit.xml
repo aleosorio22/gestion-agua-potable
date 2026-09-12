@@ -18,6 +18,10 @@
         </include>
     </source>
     <php>
+        <!-- dompdf pide bastante memoria por documento, y la suite genera
+             decenas en el mismo proceso: con los 128 MB por defecto la corrida
+             se corta a la mitad. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <!-- Las pruebas corren contra un sistema ya en marcha: sin esto, el
              middleware del instalador redirige todas las rutas web. -->

@@ -5,25 +5,34 @@ namespace App\Exports;
 use App\Models\Contador;
 use Illuminate\Support\Enumerable;
 
-class ContadoresExport extends ReporteExport
+class PendientesDeLecturaExport extends ReporteExport
 {
     public function collection(): Enumerable
     {
+        $periodo = $this->periodo();
+
+        if ($periodo === null) {
+            return collect();
+        }
+
         $sector = $this->sector();
 
         return Contador::query()
+            ->activos()
+            ->sinLecturaEn($periodo->id)
             ->when($sector, fn ($consulta) => $consulta->whereHas(
                 'predio',
                 fn ($predio) => $predio->where('sector_id', $sector->id),
             ))
-            ->with(['cliente', 'predio.sector', 'paja'])
-            ->orderBy('codigo')
-            ->get();
+            ->with(['cliente', 'predio.sector'])
+            ->get()
+            ->sortBy(fn (Contador $c): int => $c->predio?->sector?->orden ?? 999)
+            ->values();
     }
 
     public function headings(): array
     {
-        return ['Código', 'Titular', 'Dirección', 'Sector', 'Paja', 'Instalado', 'Estado'];
+        return ['Contador', 'Titular', 'Dirección', 'Sector', 'Última lectura'];
     }
 
     /** @param Contador $contador */
@@ -34,9 +43,7 @@ class ContadoresExport extends ReporteExport
             $contador->cliente?->nombre,
             $contador->predio?->direccion_completa,
             $contador->predio?->sector?->nombre ?? 'Sin sector',
-            $contador->paja?->nombre,
-            $contador->fecha_instalacion?->format('d/m/Y'),
-            ucfirst($contador->estado),
+            (float) ($contador->ultimaLectura()?->lectura_actual ?? 0),
         ];
     }
 }
