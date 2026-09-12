@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\RedirigirSiNoEstaInstalado;
 use App\Support\IdentidadDeLaEntidad;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
@@ -59,6 +60,10 @@ class LectorPanelProvider extends PanelProvider
                 fn (): string => Blade::render('@include("filament.lector.estilos")'),
             )
             ->middleware([
+                // Los paneles no pasan por el grupo `web`, así que el guardián
+                // del instalador se declara acá también: sin esto, un servidor
+                // recién montado manda a /admin/login en vez de al asistente.
+                RedirigirSiNoEstaInstalado::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Instalación completada
+    |--------------------------------------------------------------------------
+    |
+    | Lo escribe el instalador en el `.env` al terminar. Mientras sea falso,
+    | cualquier URL de la aplicación lleva al asistente de instalación en vez de
+    | a un error de conexión a base de datos.
+    |
+    */
+
+    'installed' => env('APP_INSTALLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

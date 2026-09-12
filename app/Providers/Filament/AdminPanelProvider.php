@@ -6,6 +6,7 @@ use App\Filament\Admin\Enums\GrupoNavegacion;
 use App\Filament\Admin\Widgets\EstadoDeCuentaClientes;
 use App\Filament\Admin\Widgets\ResumenCobranza;
 use App\Filament\Admin\Widgets\TrabajoPendiente;
+use App\Http\Middleware\RedirigirSiNoEstaInstalado;
 use App\Support\IdentidadDeLaEntidad;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
@@ -64,6 +65,10 @@ class AdminPanelProvider extends PanelProvider
                 EstadoDeCuentaClientes::class,
             ])
             ->middleware([
+                // Los paneles no pasan por el grupo `web`, así que el guardián
+                // del instalador se declara acá también: sin esto, un servidor
+                // recién montado manda a /admin/login en vez de al asistente.
+                RedirigirSiNoEstaInstalado::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
