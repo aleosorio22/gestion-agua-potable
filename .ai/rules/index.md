@@ -5,6 +5,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | Applies to | Rule file |
 | --- | --- |
 | app/Filament/Admin/Resources/Clientes/** | .ai/rules/clientes.md |
+| app/Providers/Filament/** | .ai/rules/filament.md |
 | lang/** | .ai/rules/lang.md |
 | app/Filament/Lector/** | .ai/rules/lector.md |
 | database/migrations/** | .ai/rules/migrations.md |
