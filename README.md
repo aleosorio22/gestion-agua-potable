@@ -16,44 +16,45 @@ git clone https://github.com/aleosorio22/gestion-agua-potable.git
 cd gestion-agua-potable
 ```
 
-Crear la base de datos vacía en MySQL:
+Crear la base de datos vacía en MySQL. El instalador crea sus propias tablas,
+pero la base tiene que existir y estar vacía:
 
 ```sql
 CREATE DATABASE aqua_gest CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Copiar el entorno y ajustar credenciales:
+Dejar el proyecto listo con un solo comando:
 
 ```bash
-cp .env.example .env
+composer preparar
 ```
 
-Editar en `.env` como mínimo `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` y **cambiar `ADMIN_PASSWORD`**.
+Ese script instala las dependencias, crea el `.env`, genera la clave de la
+aplicación y compila los recursos. No toca la base de datos: de eso se encarga
+el asistente.
 
-Instalar y preparar todo con un solo comando:
+Abrir **`/instalar`** en el navegador y seguir los cinco pasos: requisitos del
+servidor, base de datos, datos de la oficina y cuenta del administrador. Al
+terminar, el sistema queda en marcha y el asistente se cierra solo.
 
-```bash
-composer setup
-```
-
-Ese script equivale a:
-
-```bash
-composer install
-php artisan key:generate
-php artisan migrate --force --seed
-php artisan storage:link
-npm install --ignore-scripts
-npm run build
-```
-
-Levantar el entorno de desarrollo:
+Para desarrollo local:
 
 ```bash
 composer dev
 ```
 
-El panel queda en `/admin`. Se entra con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env`.
+### Instalación por terminal
+
+Quien prefiera no pasar por el navegador puede hacerlo todo por línea de
+comandos. Hay que editar `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` y
+**cambiar `ADMIN_PASSWORD`** en el `.env` antes de sembrar:
+
+```bash
+composer setup
+```
+
+Después hay que poner `APP_INSTALLED=true` en el `.env` a mano, o el sistema
+seguirá mandando al asistente.
 
 ## Qué siembra `db:seed`
 
