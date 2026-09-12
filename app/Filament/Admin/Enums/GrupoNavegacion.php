@@ -15,6 +15,7 @@ enum GrupoNavegacion: string implements HasLabel
     case Catalogos = 'catalogos';
     case Administracion = 'administracion';
     case Seguridad = 'seguridad';
+    case Reportes = 'reportes';
 
     public function getLabel(): string
     {
@@ -24,6 +25,7 @@ enum GrupoNavegacion: string implements HasLabel
             self::Catalogos => 'Catálogos',
             self::Administracion => 'Administración',
             self::Seguridad => 'Seguridad',
+            self::Reportes => 'Reportes',
         };
     }
 }
