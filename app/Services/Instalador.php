@@ -38,9 +38,19 @@ class Instalador
         'fileinfo' => 'Detecta el tipo de los documentos que se suben',
         'gd' => 'Procesa el logotipo de la oficina',
         'curl' => 'Requerida por Laravel',
+        'intl' => 'Ordena nombres y da formato a fechas y cantidades',
+        'zip' => 'Arma los reportes en Excel',
+        'dom' => 'Arma las boletas y los reportes en PDF',
+        'xml' => 'Arma los reportes en Excel',
+        'iconv' => 'Convierte los textos al exportar',
     ];
 
-    private const PHP_MINIMO = '8.2.0';
+    /**
+     * La misma que exige el `composer.json`: si el servidor trae una anterior,
+     * las dependencias ya instaladas no corren y el error aparece después,
+     * suelto y sin explicación.
+     */
+    private const PHP_MINIMO = '8.3.0';
 
     public function estaInstalado(): bool
     {
