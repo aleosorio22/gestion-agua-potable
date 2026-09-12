@@ -32,6 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
             // Closures y no valores: un PanelProvider se construye en cada
             // arranque, incluso corriendo `migrate` sobre una base vacía.
@@ -49,6 +50,9 @@ class AdminPanelProvider extends PanelProvider
                 GrupoNavegacion::Padron->getLabel(),
                 GrupoNavegacion::Operacion->getLabel(),
                 GrupoNavegacion::Catalogos->getLabel(),
+                // Reportes cierra la operación diaria; administración y seguridad
+                // quedan al final, que es donde se entra de vez en cuando.
+                GrupoNavegacion::Reportes->getLabel(),
                 GrupoNavegacion::Administracion->getLabel(),
                 GrupoNavegacion::Seguridad->getLabel(),
             ])
