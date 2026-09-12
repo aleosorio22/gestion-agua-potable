@@ -7,6 +7,10 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
+// Antes que nada: en una instalación desde cero todavía no hay `.env`, y sin
+// clave de aplicación Laravel no llega ni a dibujar el instalador.
+require_once __DIR__.'/entorno-inicial.php';
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
