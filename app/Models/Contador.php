@@ -19,6 +19,9 @@ class Contador extends Model implements Auditable
     use \OwenIt\Auditing\Auditable;
     use SoftDeletes;
 
+    /** Serie de la que sale el código sugerido al instalar un medidor. */
+    public const CLAVE_CORRELATIVO = 'contador';
+
     protected $table = 'contadores';
 
     protected $fillable = [

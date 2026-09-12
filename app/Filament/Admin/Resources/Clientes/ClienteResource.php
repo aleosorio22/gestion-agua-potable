@@ -6,7 +6,9 @@ use App\Filament\Admin\Enums\GrupoNavegacion;
 use App\Filament\Admin\Resources\Clientes\Pages\CreateCliente;
 use App\Filament\Admin\Resources\Clientes\Pages\EditCliente;
 use App\Filament\Admin\Resources\Clientes\Pages\ListClientes;
+use App\Filament\Admin\Resources\Clientes\RelationManagers\AccesosPortalRelationManager;
 use App\Filament\Admin\Resources\Clientes\RelationManagers\ContadoresRelationManager;
+use App\Filament\Admin\Resources\Clientes\RelationManagers\DocumentosRelationManager;
 use App\Filament\Admin\Resources\Clientes\Schemas\ClienteForm;
 use App\Filament\Admin\Resources\Clientes\Tables\ClientesTable;
 use App\Models\Cliente;
@@ -52,6 +54,8 @@ class ClienteResource extends Resource
     {
         return [
             ContadoresRelationManager::class,
+            DocumentosRelationManager::class,
+            AccesosPortalRelationManager::class,
         ];
     }
 

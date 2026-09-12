@@ -3,8 +3,11 @@
 namespace App\Filament\Admin\Resources\Predios\Tables;
 
 use App\Filament\Admin\Support\AccionesCatalogo;
+use App\Models\Predio;
 use Filament\Actions\EditAction;
 use Filament\Actions\RestoreAction;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -57,6 +60,21 @@ class PrediosTable
                     ->searchable()
                     ->toggleable(),
 
+                // Delata las propiedades conectadas sin nada que respalde el
+                // derecho del titular sobre ellas, que es lo que el expediente
+                // existe para evitar.
+                IconColumn::make('respaldo_documental')
+                    ->label('Respaldo')
+                    ->state(fn (Predio $record): bool => $record->documentos_count > 0)
+                    ->boolean()
+                    ->trueIcon(Heroicon::OutlinedDocumentCheck)
+                    ->falseIcon(Heroicon::OutlinedExclamationTriangle)
+                    ->trueColor('success')
+                    ->falseColor('warning')
+                    ->tooltip(fn (Predio $record): string => $record->documentos_count > 0
+                        ? 'Tiene documento que la respalda'
+                        : 'Sin escritura, recibo de luz ni contrato cargado'),
+
                 TextColumn::make('contadores_count')
                     ->label('Contadores')
                     ->counts('contadores')
@@ -74,7 +92,7 @@ class PrediosTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('clientes'))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('clientes')->withCount('documentos'))
             ->defaultSort('aldea')
             ->filters([
                 SelectFilter::make('sector_id')
@@ -88,6 +106,17 @@ class PrediosTable
                     ->relationship('clientes', 'nombre')
                     ->searchable()
                     ->preload(),
+
+                TernaryFilter::make('respaldo_documental')
+                    ->label('Respaldo documental')
+                    ->placeholder('Todos')
+                    ->trueLabel('Con documento')
+                    ->falseLabel('Sin documento')
+                    ->queries(
+                        true: fn (Builder $query): Builder => $query->has('documentos'),
+                        false: fn (Builder $query): Builder => $query->doesntHave('documentos'),
+                        blank: fn (Builder $query): Builder => $query,
+                    ),
 
                 TernaryFilter::make('sin_contador')
                     ->label('Contador instalado')

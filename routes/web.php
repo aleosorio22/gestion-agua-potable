@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\ReciboContadorController;
+use App\Http\Controllers\ReciboPagoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -21,3 +23,19 @@ Route::get('/dashboard', function () {
 Route::get('/recibos/contador/{contador}', ReciboContadorController::class)
     ->middleware(['auth'])
     ->name('recibos.contador');
+
+/**
+ * Descarga de un documento del expediente. No es una URL pública: el archivo
+ * está en disco privado y esta ruta lo entrega solo a quien la policy autoriza.
+ */
+Route::get('/documentos/{documento}', DocumentoController::class)
+    ->middleware(['auth'])
+    ->name('documentos.descargar');
+
+/**
+ * El comprobante que se le entrega al vecino cuando paga. Igual que la boleta,
+ * va fuera del panel porque se imprime solo, sin menú alrededor.
+ */
+Route::get('/recibos/pago/{pago}', ReciboPagoController::class)
+    ->middleware(['auth'])
+    ->name('recibos.pago');

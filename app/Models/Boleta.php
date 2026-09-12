@@ -178,6 +178,23 @@ class Boleta extends Model implements Auditable
         );
     }
 
+    /**
+     * Todo lo que la oficina tiene por cobrar, en una sola consulta.
+     *
+     * Las boletas saldadas aportan cero, así que sumarlas todas da el saldo
+     * real sin tener que filtrarlas antes.
+     */
+    public static function saldoPendienteTotal(): float
+    {
+        $pagado = '(select coalesce(sum(p.monto), 0) from pagos p '
+            .'where p.boleta_id = boletas.id and p.revertido_en is null)';
+
+        return round((float) static::query()
+            ->vigentes()
+            ->selectRaw("coalesce(sum(boletas.monto - {$pagado}), 0) as total")
+            ->value('total'), 2);
+    }
+
     public function anular(User $usuario, string $motivo): void
     {
         $this->update([

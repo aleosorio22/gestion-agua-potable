@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Boletas\Tables;
 
 use App\Filament\Admin\Support\AccionesBoleta;
+use App\Filament\Admin\Support\AccionesPago;
 use App\Models\Boleta;
 use App\Models\Periodo;
 use Filament\Tables\Columns\TextColumn;
@@ -127,6 +128,7 @@ class BoletasTable
                     ->preload(),
             ])
             ->recordActions([
+                AccionesPago::cobrar(),
                 AccionesBoleta::imprimir(),
                 AccionesBoleta::anular(),
             ])
