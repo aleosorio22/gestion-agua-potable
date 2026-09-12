@@ -8,12 +8,29 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
 class UsuarioForm
 {
+    /**
+     * Si entre los roles elegidos está el de campo.
+     *
+     * Llegan como ids porque el selector cuelga de la relación, así que hay que
+     * resolverlos contra la tabla en vez de comparar nombres.
+     *
+     * @param  mixed  $roles
+     */
+    protected static function incluyeRolLector($roles): bool
+    {
+        return Role::query()
+            ->whereKey(is_array($roles) ? $roles : [])
+            ->where('name', 'Lector')
+            ->exists();
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -78,6 +95,7 @@ class UsuarioForm
                             ->multiple()
                             ->preload()
                             ->native(false)
+                            ->live()
                             // El rol Cliente se otorga desde el acceso al
                             // portal, no acá: asignarlo aquí crearía una cuenta
                             // sin `cliente_accesos`, que no entra a ningún lado.
@@ -87,6 +105,17 @@ class UsuarioForm
                                 ->pluck('name', 'id')
                                 ->all())
                             ->helperText('Define a qué pantallas entra. El acceso de un vecino al portal se otorga desde su ficha de cliente.'),
+
+                        Select::make('sectores')
+                            ->label('Sectores que recorre')
+                            ->relationship('sectores', 'nombre')
+                            ->multiple()
+                            ->preload()
+                            ->native(false)
+                            ->columnSpanFull()
+                            // Solo tiene sentido para quien sale a campo.
+                            ->visible(fn (Get $get): bool => static::incluyeRolLector($get('roles')))
+                            ->helperText('Déjelo vacío para que recorra todo el padrón. Los predios sin sector aparecen en la ruta de cualquier lector, para que ninguno quede sin leer.'),
 
                         Toggle::make('activo')
                             ->label('Cuenta activa')

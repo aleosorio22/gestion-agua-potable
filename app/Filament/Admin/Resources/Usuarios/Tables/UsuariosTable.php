@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Usuarios\Tables;
 
 use App\Filament\Admin\Support\AccionesUsuario;
+use App\Models\Sector;
 use App\Models\User;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
@@ -31,6 +32,16 @@ class UsuariosTable
                     ->color('gray')
                     ->placeholder('Sin rol asignado'),
 
+                TextColumn::make('sectores.nombre')
+                    ->label('Recorre')
+                    ->badge()
+                    ->color('info')
+                    ->placeholder('Todo el padrón')
+                    ->listWithLineBreaks()
+                    ->limitList(2)
+                    ->expandableLimitedList()
+                    ->visible(fn (): bool => Sector::query()->exists()),
+
                 IconColumn::make('activo')
                     ->label('Activa')
                     ->boolean(),
@@ -53,7 +64,7 @@ class UsuariosTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('roles'))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['roles', 'sectores']))
             ->defaultSort('name')
             ->filters([
                 SelectFilter::make('rol')
