@@ -11,6 +11,16 @@ if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php'))
 }
 
 // Register the Composer autoloader...
+//
+// Quien clona el repositorio y abre el navegador antes de instalar las
+// dependencias se topa aquí con un error de PHP en inglés que no dice qué
+// hacer. Es el primer contacto con el sistema: mejor explicarlo.
+if (! file_exists(__DIR__.'/../vendor/autoload.php')) {
+    require __DIR__.'/falta-preparar.php';
+
+    exit;
+}
+
 require __DIR__.'/../vendor/autoload.php';
 
 // Bootstrap Laravel and handle the request...
