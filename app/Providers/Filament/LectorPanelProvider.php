@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Support\IdentidadDeLaEntidad;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -37,7 +38,11 @@ class LectorPanelProvider extends PanelProvider
             ->id('lector')
             ->path('lector')
             ->login()
-            ->brandName('Ruta de lectura')
+            // La oficina primero: el lector tiene que reconocer de un vistazo
+            // que entró donde debía. La tarea ya la dice el encabezado.
+            ->brandName(fn (): string => app(IdentidadDeLaEntidad::class)->nombre())
+            ->brandLogo(fn (): ?string => app(IdentidadDeLaEntidad::class)->logo())
+            ->brandLogoHeight('2rem')
             ->colors([
                 'primary' => Color::Emerald,
             ])
