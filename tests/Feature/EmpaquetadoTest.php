@@ -18,7 +18,7 @@ it('deja fuera del paquete el .env y las notas internas del equipo', function ()
 
     // `git archive` ya excluye lo ignorado; esto cubre lo que sí está
     // versionado y no debe salir del equipo.
-    expect($sobra)->toContain('.ai', 'CLAUDE.md', 'tests');
+    expect($sobra)->toContain('.ai', '.claude', 'CLAUDE.md', 'tests');
 
     // Y lo que nunca debe estar en la lista, porque el sistema no arranca sin ello.
     expect($sobra)->not->toContain('vendor', 'public', 'config', 'bootstrap', '.env.example');

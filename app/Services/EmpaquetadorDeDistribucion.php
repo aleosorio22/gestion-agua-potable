@@ -46,7 +46,9 @@ class EmpaquetadorDeDistribucion
 
         // Notas internas y configuración de las herramientas del equipo
         '.ai',
+        '.claude',
         '.mcp.json',
+        '.npmrc',
         'boost.json',
         'AGENTS.md',
         'CLAUDE.md',
