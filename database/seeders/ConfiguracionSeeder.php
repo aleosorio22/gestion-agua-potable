@@ -22,6 +22,10 @@ class ConfiguracionSeeder extends Seeder
             ['clave' => 'ubicacion.departamento', 'valor' => null, 'descripcion' => 'Departamento donde opera'],
             ['clave' => 'ubicacion.municipio', 'valor' => null, 'descripcion' => 'Municipio donde opera'],
             ['clave' => 'facturacion.dias_vencimiento', 'valor' => '30', 'descripcion' => 'Días entre emisión y vencimiento'],
+            ['clave' => 'facturacion.emitir_al_registrar', 'valor' => '0', 'descripcion' => 'Emitir la boleta al registrar la lectura'],
+            ['clave' => 'impresion.formato', 'valor' => 'termica_80', 'descripcion' => 'Formato de papel de los documentos impresos'],
+            ['clave' => 'impresion.mostrar_logo', 'valor' => '0', 'descripcion' => 'Si el logotipo sale impreso'],
+            ['clave' => 'impresion.pie_de_pagina', 'valor' => null, 'descripcion' => 'Texto al pie de los documentos impresos'],
         ];
 
         foreach ($valores as $valor) {

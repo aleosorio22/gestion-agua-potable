@@ -3,7 +3,10 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -76,6 +79,15 @@
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ],
+        "preparar": [
+            "@composer install --no-interaction --prefer-dist --optimize-autoloader",
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php artisan key:generate --force",
+            "@php artisan storage:link",
+            "npm install --ignore-scripts",
+            "npm run build",
+            "@php -r \"echo PHP_EOL, 'Listo. Abra ahora /instalar en el navegador para terminar la instalacion.', PHP_EOL, PHP_EOL;\""
         ]
     },
     "extra": {
@@ -93,5 +105,8 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "scripts-descriptions": {
+        "preparar": "Deja el proyecto listo para instalarlo desde el navegador en /instalar"
+    }
 }

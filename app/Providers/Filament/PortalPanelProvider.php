@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\RedirigirSiNoEstaInstalado;
+use App\Support\IdentidadDeLaEntidad;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -25,6 +27,11 @@ class PortalPanelProvider extends PanelProvider
             ->id('portal')
             ->path('portal')
             ->login()
+            // El vecino entra desde un enlace: el nombre de su oficina es lo
+            // que le confirma que la página es la que dice ser.
+            ->brandName(fn (): string => app(IdentidadDeLaEntidad::class)->nombre())
+            ->brandLogo(fn (): ?string => app(IdentidadDeLaEntidad::class)->logo())
+            ->brandLogoHeight('2.25rem')
             ->colors([
                 'primary' => Color::Emerald,
             ])
@@ -34,6 +41,10 @@ class PortalPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->middleware([
+                // Los paneles no pasan por el grupo `web`, así que el guardián
+                // del instalador se declara acá también: sin esto, un servidor
+                // recién montado manda a /admin/login en vez de al asistente.
+                RedirigirSiNoEstaInstalado::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

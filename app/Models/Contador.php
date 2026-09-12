@@ -99,6 +99,29 @@ class Contador extends Model implements Auditable
     }
 
     /**
+     * Los contadores que le toca caminar a este lector.
+     *
+     * Un lector sin sectores asignados recorre todo. Los predios sin sector
+     * entran en la ruta de cualquiera: dejarlos fuera los condenaría a no
+     * leerse nunca, que es peor que el riesgo de que dos lectores se crucen.
+     */
+    public function scopeDeLaRutaDe($query, ?User $lector)
+    {
+        if ($lector === null || ! $lector->tieneRutaAsignada()) {
+            return $query;
+        }
+
+        $sectores = $lector->sectores()->pluck('sectores.id');
+
+        return $query->whereHas(
+            'predio',
+            fn ($predio) => $predio
+                ->whereIn('sector_id', $sectores)
+                ->orWhereNull('sector_id')
+        );
+    }
+
+    /**
      * Contadores activos que aún no tienen lectura en el período dado.
      * Es la consulta principal de la pantalla del lector.
      */

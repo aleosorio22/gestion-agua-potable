@@ -3,6 +3,11 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Admin\Enums\GrupoNavegacion;
+use App\Filament\Admin\Widgets\EstadoDeCuentaClientes;
+use App\Filament\Admin\Widgets\ResumenCobranza;
+use App\Filament\Admin\Widgets\TrabajoPendiente;
+use App\Http\Middleware\RedirigirSiNoEstaInstalado;
+use App\Support\IdentidadDeLaEntidad;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -12,8 +17,6 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -31,6 +34,12 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
+            // Closures y no valores: un PanelProvider se construye en cada
+            // arranque, incluso corriendo `migrate` sobre una base vacía.
+            // Consultar la tabla ahí rompería la instalación antes de existir.
+            ->brandName(fn (): string => app(IdentidadDeLaEntidad::class)->nombre())
+            ->brandLogo(fn (): ?string => app(IdentidadDeLaEntidad::class)->logo())
+            ->brandLogoHeight('2.25rem')
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -41,18 +50,29 @@ class AdminPanelProvider extends PanelProvider
                 GrupoNavegacion::Padron->getLabel(),
                 GrupoNavegacion::Operacion->getLabel(),
                 GrupoNavegacion::Catalogos->getLabel(),
-                GrupoNavegacion::Reportes->getLabel()
+                // Reportes cierra la operación diaria; administración y seguridad
+                // quedan al final, que es donde se entra de vez en cuando.
+                GrupoNavegacion::Reportes->getLabel(),
+                GrupoNavegacion::Administracion->getLabel(),
+                GrupoNavegacion::Seguridad->getLabel(),
             ])
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\Filament\Admin\Pages')
             ->pages([
                 Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
+            // El tablero muestra el negocio, no la tarjeta de la cuenta ni el
+            // logo de Filament que vienen de fábrica.
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                ResumenCobranza::class,
+                TrabajoPendiente::class,
+                EstadoDeCuentaClientes::class,
             ])
             ->middleware([
+                // Los paneles no pasan por el grupo `web`, así que el guardián
+                // del instalador se declara acá también: sin esto, un servidor
+                // recién montado manda a /admin/login en vez de al asistente.
+                RedirigirSiNoEstaInstalado::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
@@ -64,7 +84,19 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->plugins([
-                FilamentShieldPlugin::make(),
+                // Los roles son administración de la oficina, no una sección
+                // aparte que se llame como el paquete que la provee: la
+                // traducción del propio Shield deja «Filament Shield» en
+                // español, que a la junta no le dice nada.
+                // Grupo propio y no «Administración»: Filament no fusiona el
+                // grupo de un Resource —que llega como enum— con el de un
+                // plugin —que llega como texto—, y el menú terminaba con
+                // «Administración» dos veces. La traducción del propio Shield
+                // deja «Filament Shield» en español, que a la junta no le dice
+                // nada.
+                FilamentShieldPlugin::make()
+                    ->navigationGroup(GrupoNavegacion::Seguridad->getLabel())
+                    ->navigationLabel('Roles y permisos'),
             ])
             ->authMiddleware([
                 Authenticate::class,

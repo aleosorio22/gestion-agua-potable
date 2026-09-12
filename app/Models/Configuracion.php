@@ -38,7 +38,12 @@ class Configuracion extends Model implements Auditable
 
     public static function guardar(string $clave, ?string $valor): void
     {
-        static::updateOrCreate(['clave' => $clave], ['valor' => $valor]);
+        static::updateOrCreate(['clave' => $clave], [
+            'valor' => $valor,
+            // La columna existía desde la primera migración sin que nadie la
+            // llenara. Junto con la auditoría responde quién tocó qué y cuándo.
+            'actualizado_por' => auth()->id(),
+        ]);
 
         Cache::forget("configuracion.{$clave}");
     }

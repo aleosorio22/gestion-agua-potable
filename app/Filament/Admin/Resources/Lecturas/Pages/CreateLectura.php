@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\Lecturas\Pages;
 
 use App\Filament\Admin\Resources\Lecturas\LecturaResource;
+use App\Services\EmisorAutomatico;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -26,6 +27,15 @@ class CreateLectura extends CreateRecord
         $data['usuario_id'] = auth()->id();
 
         return $data;
+    }
+
+    /**
+     * La boleta sale sola si la oficina lo configuró así. Nunca al revés: si
+     * la emisión falla, la lectura ya quedó guardada igual.
+     */
+    protected function afterCreate(): void
+    {
+        app(EmisorAutomatico::class)->emitirSiCorresponde($this->record);
     }
 
     protected function getRedirectUrl(): string

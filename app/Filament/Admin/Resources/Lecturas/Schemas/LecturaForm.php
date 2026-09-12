@@ -168,6 +168,10 @@ class LecturaForm
                 ->label('Lectura actual')
                 ->required()
                 ->numeric()
+                // El teclado del celular abre en números: es el único campo que
+                // se teclea en toda la jornada, y cambiar de teclado en cada
+                // casa cuesta un toque de más por vivienda.
+                ->inputMode('decimal')
                 ->minValue(0)
                 ->step(0.01)
                 ->suffix('m³')

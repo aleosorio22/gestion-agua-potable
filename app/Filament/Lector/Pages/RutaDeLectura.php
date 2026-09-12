@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Filament\Admin\Pages;
+namespace App\Filament\Lector\Pages;
 
-use App\Filament\Admin\Enums\GrupoNavegacion;
 use App\Filament\Admin\Resources\Lecturas\Schemas\LecturaForm;
-use App\Filament\Admin\Resources\Periodos\PeriodoResource;
 use App\Models\Contador;
 use App\Models\Lectura;
 use App\Models\Periodo;
+use App\Services\EmisorAutomatico;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Panel;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -20,7 +20,6 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use UnitEnum;
 
 /**
  * La pantalla del lector en campo.
@@ -30,21 +29,26 @@ use UnitEnum;
  * teclear una cifra. El README lo marca como el problema principal a resolver,
  * y se usa desde el navegador del celular.
  */
-class RutaLectura extends Page implements HasTable
+class RutaDeLectura extends Page implements HasTable
 {
     use InteractsWithTable;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;
 
-    protected static string|UnitEnum|null $navigationGroup = GrupoNavegacion::Operacion;
+    protected static ?string $navigationLabel = 'Mi ruta';
 
-    protected static ?int $navigationSort = 15;
+    protected static ?string $slug = 'ruta';
 
-    protected static ?string $navigationLabel = 'Ruta de lectura';
+    /**
+     * La ruta es la pantalla de inicio del panel: el lector entra y ya está en
+     * su trabajo, sin un tablero de por medio.
+     */
+    public static function getRoutePath(Panel $panel): string
+    {
+        return '/';
+    }
 
-    protected static ?string $slug = 'ruta-de-lectura';
-
-    protected string $view = 'filament.admin.pages.ruta-lectura';
+    protected string $view = 'filament.lector.pages.ruta-de-lectura';
 
     /**
      * Período sobre el que se está recorriendo la ruta.
@@ -58,7 +62,7 @@ class RutaLectura extends Page implements HasTable
 
     public function getTitle(): string
     {
-        return 'Ruta de lectura';
+        return '';
     }
 
     public function mount(): void
@@ -102,30 +106,17 @@ class RutaLectura extends Page implements HasTable
             && now()->startOfDay()->betweenIncluded($periodo->fecha_inicio, $periodo->fecha_fin);
     }
 
-    /**
-     * Lleva a abrir el ciclo cuando no hay ninguno: el aviso explica el
-     * problema, y esto lo resuelve sin hacer buscar la pantalla en el menú.
-     */
-    public function abrirPeriodoAction(): Action
-    {
-        return Action::make('abrirPeriodo')
-            ->label('Abrir período')
-            ->icon(Heroicon::OutlinedCalendarDays)
-            ->visible(fn (): bool => $this->getPeriodo() === null)
-            ->url(PeriodoResource::getUrl('create'));
-    }
-
     public function getAvisoProperty(): ?string
     {
         $periodo = $this->getPeriodo();
 
         if ($periodo === null) {
-            return 'No hay ningún período abierto. Abra el ciclo del mes para poder recorrer la ruta.';
+            return 'No hay ningún período abierto. Avise a la oficina para que abran el ciclo del mes.';
         }
 
         if (! $this->puedeRegistrar()) {
             return sprintf(
-                'Hoy (%s) está fuera del período %s, que va del %s al %s. Puede consultar la ruta, pero para registrar la visita use la pantalla de Lecturas y ponga la fecha correcta.',
+                'Hoy (%s) está fuera del período %s, que va del %s al %s. Puede consultar la ruta, pero para registrar visitas avise a la oficina.',
                 now()->format('d/m/Y'),
                 $periodo->etiqueta,
                 $periodo->fecha_inicio->format('d/m/Y'),
@@ -147,9 +138,16 @@ class RutaLectura extends Page implements HasTable
             return ['leidos' => 0, 'total' => 0];
         }
 
+        $suyos = Contador::query()->activos()->deLaRutaDe(auth()->user());
+
         return [
-            'leidos' => Lectura::where('periodo_id', $periodo->id)->count(),
-            'total' => Contador::activos()->count(),
+            // Su recorrido, no el del padrón entero: a un lector con la mitad
+            // de los sectores le diría que va por la mitad para siempre.
+            'leidos' => (clone $suyos)->whereHas(
+                'lecturas',
+                fn (Builder $q): Builder => $q->where('periodo_id', $periodo->id)
+            )->count(),
+            'total' => $suyos->count(),
         ];
     }
 
@@ -207,7 +205,7 @@ class RutaLectura extends Page implements HasTable
             ])
             ->recordActions([
                 $this->accionRegistrarLectura(),
-                $this->accionVerLectura(),
+                $this->accionCorregirLectura(),
             ])
             ->toolbarActions([])
             ->emptyStateHeading(fn (): string => $this->vista === 'pendientes'
@@ -227,6 +225,9 @@ class RutaLectura extends Page implements HasTable
         $periodo = $this->getPeriodo();
 
         $consulta = Contador::query()
+            // Cada lector camina lo suyo. Sin sectores asignados ve todo, que
+            // es el caso de la oficina con un solo lector.
+            ->deLaRutaDe(auth()->user())
             ->with(['cliente', 'predio.sector', 'paja'])
             ->leftJoin('predios', 'predios.id', '=', 'contadores.predio_id')
             ->leftJoin('sectores', 'sectores.id', '=', 'predios.sector_id')
@@ -281,19 +282,75 @@ class RutaLectura extends Page implements HasTable
                     ->title("Contador {$record->codigo} leído")
                     ->body("Consumo del período: {$lectura->refresh()->consumo_m3} m³.")
                     ->send();
+
+                app(EmisorAutomatico::class)->emitirSiCorresponde($lectura);
             });
     }
 
-    protected function accionVerLectura(): Action
+    /**
+     * Corregir lo que se acaba de escribir, sin volver a la oficina.
+     *
+     * Un dedazo en el celular es la cosa más previsible de esta pantalla. El
+     * lector ya no entra a /admin, así que si no puede arreglarlo acá tiene que
+     * pedirle a alguien que lo haga, y hasta entonces la boleta sale mal.
+     *
+     * Solo mientras la lectura no esté facturada: después ya es el respaldo de
+     * un documento contable y corregirla obliga a anular la boleta.
+     */
+    protected function accionCorregirLectura(): Action
     {
-        return Action::make('ver')
-            ->label('Ver lectura')
-            ->icon(Heroicon::OutlinedEye)
+        return Action::make('corregir')
+            ->label('Corregir')
+            ->icon(Heroicon::OutlinedPencilSquare)
             ->color('gray')
             ->visible(fn (): bool => $this->vista === 'leidos')
-            ->url(fn (Contador $record): ?string => ($lectura = $this->lecturaDelPeriodo($record))
-                ? route('filament.admin.resources.lecturas.edit', $lectura)
-                : null);
+            // Deshabilitado y no escondido: si el botón desaparece, el lector
+            // se queda preguntándose por qué esta casa sí y aquella no.
+            ->disabled(fn (Contador $record): bool => $this->lecturaDelPeriodo($record)?->esta_facturada ?? true)
+            ->tooltip(fn (Contador $record): ?string => ($this->lecturaDelPeriodo($record)?->esta_facturada ?? true)
+                ? 'Ya se facturó. Avise a la oficina si hay que corregirla.'
+                : null)
+            ->modalHeading(fn (Contador $record): string => "Contador {$record->codigo}")
+            ->modalDescription(fn (Contador $record): string => $record->predio?->direccion_completa ?: 'Sin dirección registrada')
+            ->modalSubmitActionLabel('Guardar la corrección')
+            ->fillForm(fn (Contador $record): array => [
+                'lectura_anterior' => (float) $this->lecturaDelPeriodo($record)?->lectura_anterior,
+                'lectura_actual' => (float) $this->lecturaDelPeriodo($record)?->lectura_actual,
+                'observaciones' => $this->lecturaDelPeriodo($record)?->observaciones,
+            ])
+            ->schema([
+                ...LecturaForm::camposDelMarcador(),
+
+                Textarea::make('observaciones')
+                    ->label('Observaciones')
+                    ->maxLength(255)
+                    ->rows(2),
+            ])
+            ->action(function (Contador $record, array $data): void {
+                $lectura = $this->lecturaDelPeriodo($record);
+
+                if ($lectura === null || $lectura->esta_facturada) {
+                    Notification::make()
+                        ->danger()
+                        ->title('Ya no se puede corregir')
+                        ->body('Esta lectura fue facturada. Avise a la oficina para que anulen la boleta.')
+                        ->persistent()
+                        ->send();
+
+                    return;
+                }
+
+                $lectura->update([
+                    'lectura_actual' => $data['lectura_actual'],
+                    'observaciones' => $data['observaciones'] ?? null,
+                ]);
+
+                Notification::make()
+                    ->success()
+                    ->title("Contador {$record->codigo} corregido")
+                    ->body("Consumo del período: {$lectura->refresh()->consumo_m3} m³.")
+                    ->send();
+            });
     }
 
     protected function lecturaDelPeriodo(Contador $contador): ?Lectura
