@@ -12,7 +12,7 @@
         "filament/filament": "5.*",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
-Ag        "maatwebsite/excel": "^4.0",
+        "maatwebsite/excel": "^4.0",
         "owen-it/laravel-auditing": "*",
         "spatie/laravel-permission": "*"
     },
