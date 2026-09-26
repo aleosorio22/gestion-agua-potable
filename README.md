@@ -1,3 +1,7 @@
+# Keven Ryan Lopez Pineda 2do Parcial
+
+Mejoras - Vista de imprimir y contador de caracteres
+
 # Gestión de Agua Potable
 
 Sistema de gestión para oficinas municipales y comités de agua potable: padrón de
