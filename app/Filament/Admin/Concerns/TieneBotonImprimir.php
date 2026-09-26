@@ -12,9 +12,6 @@ trait TieneBotonImprimir
             ->label('Imprimir')
             ->icon('heroicon-o-printer')
             ->color('gray')
-            ->action(fn () => null)
-            ->extraAttributes([
-                'onclick' => 'window.print(); return false;',
-            ]);
+            ->url('javascript:window.print()');
     }
 }

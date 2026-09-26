@@ -6,6 +6,7 @@
 @media print {
     .fi-sidebar,
     .fi-topbar,
+    .fi-sidebar-close-overlay,
     .fi-header-actions,
     .fi-header-heading + nav,
     .fi-breadcrumbs,
@@ -24,5 +25,18 @@
 
     .fi-ta-table {
         width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    .fi-ta-ctn,
+    .fi-ta-content {
+        overflow: visible !important;
+        max-height: none !important;
+        height: auto !important;
+        width: auto !important;
+    }
+
+    * {
+        overflow: visible !important;
     }
 }
