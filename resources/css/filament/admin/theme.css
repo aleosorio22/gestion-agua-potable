@@ -2,3 +2,27 @@
 
 @source '../../../../app/Filament/Admin/**/*';
 @source '../../../../resources/views/filament/admin/**/*';
+
+@media print {
+    .fi-sidebar,
+    .fi-topbar,
+    .fi-header-actions,
+    .fi-header-heading + nav,
+    .fi-breadcrumbs,
+    .fi-ta-header-toolbar,
+    .fi-ta-pagination,
+    .fi-ta-actions,
+    .fi-ta-selection-indicator {
+        display: none !important;
+    }
+
+    .fi-main {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .fi-ta-table {
+        width: 100% !important;
+    }
+}
