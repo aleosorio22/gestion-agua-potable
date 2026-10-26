@@ -5,6 +5,7 @@ use App\Http\Controllers\InstaladorController;
 use App\Http\Controllers\ReciboContadorController;
 use App\Http\Controllers\ReciboPagoController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PortalController;
 
 Route::get('/', function () {
     return view('layouts.app');
@@ -41,6 +42,7 @@ Route::get('/recibos/pago/{pago}', ReciboPagoController::class)
     ->middleware(['auth'])
     ->name('recibos.pago');
 
+Route::get('/informacion', [PortalController::class, 'index'])->name('informacion.index');
 /*
 |--------------------------------------------------------------------------
 | Instalador

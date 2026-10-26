@@ -72,6 +72,14 @@ class Pago extends Model implements Auditable
         return $this->belongsTo(User::class, 'revertido_por');
     }
 
+    /**
+     * El estado de su entrega al banco y al ERP municipal.
+     */
+    public function envio()
+    {
+        return $this->hasOne(PagoEnvio::class);
+    }
+
     public function getEstaRevertidoAttribute(): bool
     {
         return $this->revertido_en !== null;
