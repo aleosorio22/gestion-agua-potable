@@ -504,6 +504,8 @@ class DatosDePruebaSeeder extends Seeder
         $boletas = DB::table('boletas')->whereIn('cliente_id', $clientes)->pluck('id');
         $pagos = DB::table('pagos')->whereIn('boleta_id', $boletas)->pluck('id');
 
+        // Antes que los pagos: el envío a los sistemas externos los referencia.
+        DB::table('pago_envios')->whereIn('pago_id', $pagos)->delete();
         DB::table('pagos')->whereIn('id', $pagos)->delete();
         DB::table('boletas')->whereIn('id', $boletas)->delete();
         DB::table('evidencias_lectura')->whereIn('lectura_id', $lecturas)->delete();
