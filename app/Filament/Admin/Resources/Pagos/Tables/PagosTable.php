@@ -70,6 +70,23 @@ class PagosTable
                     ->label('Cobró')
                     ->toggleable(),
 
+                TextColumn::make('envio.estado_envio')
+                    ->label('Envío')
+                    ->badge()
+                    ->placeholder('—')
+                    ->color(fn (?string $state): string => match ($state) {
+                        'ENVIADO' => 'success',
+                        'ERROR' => 'danger',
+                        'ENCOLADO' => 'warning',
+                        default => 'gray',
+                    })
+                    // Banco y ERP se resuelven por separado: el detalle importa
+                    // cuando uno entregó y el otro no.
+                    ->description(fn (Pago $record): ?string => $record->envio === null
+                        ? null
+                        : "Banco {$record->envio->estado_banco} · ERP {$record->envio->estado_erp}")
+                    ->toggleable(),
+
                 TextColumn::make('revertido_en')
                     ->label('Estado')
                     ->badge()
@@ -77,12 +94,28 @@ class PagosTable
                     ->color(fn (Pago $record): string => $record->esta_revertido ? 'danger' : 'success')
                     ->description(fn (Pago $record): ?string => $record->motivo_reverso),
             ])
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['boleta.cliente', 'metodoPago', 'usuario']))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['boleta.cliente', 'metodoPago', 'usuario', 'envio']))
             ->defaultSort('fecha_pago', 'desc')
             ->filters([
                 SelectFilter::make('metodo_pago_id')
                     ->label('Método')
                     ->options(fn (): array => MetodoPago::query()->orderBy('nombre')->pluck('nombre', 'id')->all()),
+
+                SelectFilter::make('envio')
+                    ->label('Envío')
+                    ->options([
+                        'PENDIENTE' => 'Pendiente',
+                        'ENCOLADO' => 'Encolado',
+                        'ENVIADO' => 'Enviado',
+                        'ERROR' => 'Con error',
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        $data['value'] ?? null,
+                        fn (Builder $q, string $estado) => $q->whereHas(
+                            'envio',
+                            fn ($envio) => $envio->where('estado_envio', $estado)
+                        )
+                    )),
 
                 TernaryFilter::make('vigente')
                     ->label('Estado')
