@@ -72,13 +72,19 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | La hora de la oficina, no la del servidor. El sistema registra cobros en
+    | ventanilla y cierra caja por día: con UTC, todo lo cobrado después de las
+    | seis de la tarde aparecería con fecha del día siguiente, y el corte de
+    | caja dejaría de cuadrar con lo que hay en el cajón.
+    |
+    | El valor por defecto es Guatemala y no UTC a propósito: una oficina que
+    | instala el paquete desde el navegador no tiene cómo editar el `.env`, y
+    | este sistema se escribió para oficinas guatemaltecas. Quien lo reutilice
+    | en otro país lo cambia con APP_TIMEZONE.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'America/Guatemala'),
 
     /*
     |--------------------------------------------------------------------------
